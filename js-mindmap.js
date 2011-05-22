@@ -458,6 +458,44 @@
     }
     
     $.fn.mindmap = function(options) {
+	  var $mindmap = $(this);
+	  var $return = $mindmap._mindmap(options);
+
+            // add the data to the mindmap
+            var root = $('>ul>li',$mindmap).get(0).mynode = $mindmap.addRootNode($('>ul>li>div',$mindmap), {
+                onclick:function(node) {
+                    $(node.obj.activeNode.content).each(function() {
+                        this.hide();
+                    });
+                }
+            });
+            $('>ul>li',$mindmap).hide();
+            var addLI = function() {
+                var parentnode = $(this).parents('li').get(0);
+                if (typeof(parentnode)=='undefined') parentnode=root;
+                    else parentnode=parentnode.mynode;
+                
+                this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this), {
+                    onclick:function(node) {
+                        $(node.obj.activeNode.content).each(function() {
+                            this.hide();
+                        });
+                        $(node.content).each(function() {
+                            this.show();
+                        });
+                    }
+                });
+                $(this).hide();
+                $('>ul>li', this).each(addLI);
+            };
+            $('>ul>li>ul',$mindmap).each(function() { 
+                $('>li', this).each(addLI);
+            });
+            
+            return $return;
+    };
+    
+    $.fn._mindmap = function(options) {
         // Define default settings.
         var options = $.extend({
             attract: 15,
