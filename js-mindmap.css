@@ -14,15 +14,6 @@
 .js-mindmap-active .node.active{
         font-size:1.5em;
 }
-.js-mindmap-active img.line {
-	position:absolute;
-	width:200px;
-	height:133px;
-	top:0;
-	left:0;
-	display:block;
-	z-index:0;
-	}
 .ui-draggable {
 	position:absolute;
 }

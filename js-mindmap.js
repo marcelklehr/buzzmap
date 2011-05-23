@@ -460,7 +460,6 @@
     $.fn.mindmap = function(options) {
 	  var $mindmap = $(this);
 	  var $return = $mindmap._mindmap(options);
-
             // add the data to the mindmap
             var root = $('>ul>li',$mindmap).get(0).mynode = $mindmap.addRootNode($('>ul>li>div',$mindmap), {
                 onclick:function(node) {
@@ -469,6 +468,7 @@
                     });
                 }
             });
+
             $('>ul>li',$mindmap).hide();
             var addLI = function() {
                 var parentnode = $(this).parents('li').get(0);
@@ -491,7 +491,6 @@
             $('>ul>li>ul',$mindmap).each(function() { 
                 $('>li', this).each(addLI);
             });
-            
             return $return;
     };
     
