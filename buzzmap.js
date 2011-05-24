@@ -1,6 +1,8 @@
 /*
- js-mindmap
+ buzzmap
+ Copyright (c) 2011 Marcel Klehr
  
+ Original js-mindmap
  Copyright (c) 2008/09/10 Kenneth Kufluk http://kenneth.kufluk.com/
  
  MIT (X11) license
@@ -27,34 +29,10 @@
 
 /*
     Things to do:
-        - remove Lines - NO - they seem harmless enough!
-        - add better "make active" methods
-        - remove the "root node" concept.  Tie nodes to elements better, so we can check if a parent element is root
-
-        - allow progressive exploration
-            - allow easy supplying of an ajax param for loading new kids and a loader anim
-        - allow easy exploration of a ul or ol to find nodes
-        - limit to an area
-        - allow more content (div instead of an a)
-        - test multiple canvases
-        - Hidden children should not be bounded
-        - Layout children in circles
-        - Add/Edit nodes
-        - Resize event
-        - incorporate widths into the forces, so left boundaries push on right boundaries
-
-
-    Make demos:
-        - amazon explore
-        - directgov explore
-        - thesaurus
-        - themes
+        - save to json
 
 */
 (function($){
-
-    var TIMEOUT = 4;  // movement timeout in seconds
-    var CENTRE_FORCE = 3;  // strength of attraction to the centre by the active node
 
     // Define all Node related functions.
     var Node = function(obj, info, parent, opts) {
@@ -70,7 +48,7 @@
         // create the element for display
         this.el = $('<div>'+this.info+'</div>');
         this.el.addClass('node');
-        $('.js-mindmap-active').prepend(this.el);
+        $('.buzzmap-active').prepend(this.el);
         
         if (!parent) {
             obj.activeNode = this;
@@ -187,7 +165,7 @@
         this.moveTimer = setTimeout(function() {
             //stop the movement
             thisnode.obj.movementStopped = true;
-        }, TIMEOUT*1000);
+        }, this.options.timeout*1000);
 
         if (this.moving) return;
         this.moving = true;
@@ -213,16 +191,16 @@
 
     // find the right position for this node
     Node.prototype.findEquilibrium = function() {
-        var static = true;
-        static = this.display() && static;
+        var Static = true;
+        Static = this.display() && Static;
         for (var i=0;i<this.children.length;i++) {
-            static = this.children[i].findEquilibrium() && static;
+            Static = this.children[i].findEquilibrium() && Static;
         }
-        return static;
+        return Static;
     }
 
     //Display this node, and its children
-    Node.prototype.display = function(depth) {
+    Node.prototype.display = function() {
         if (this.visible) {
           // if: I'm not active AND my parent's not active AND my children aren't active ...
           if (!this.el.hasClass('active'))
@@ -244,7 +222,6 @@
             this.visible = true;
           }
         }
-        if (typeof(depth)=='undefined') depth=0;
         this.drawn = true;
         // am I positioned?  If not, position me.
         if (!this.hasPosition) {
@@ -258,15 +235,13 @@
         var stepAngle = Math.PI*2/this.children.length;
         var parent = this;  
         $.each(this.children, function(index) {
-            if (!this.hasPosition) {
-                if (!this.options.showProgressive || depth<=1) {
+            if (!this.hasPosition && this.el.css('display') != 'none') {
                     var angle = index * stepAngle;
                     this.x = (50 * Math.cos(angle)) + parent.x;
                     this.y = (50 * Math.sin(angle)) + parent.y;
                     this.hasPosition=true;           
                 	this.el.css('left', this.x + "px");
                 	this.el.css('top', this.y + "px");
-                }
             }
         });
         // update my position
@@ -285,8 +260,8 @@
         
         //apply accelerations
         var forces = this.getForceVector();
-        this.dx += forces.x * this.options.timeperiod;
-        this.dy += forces.y * this.options.timeperiod;
+        this.dx += forces.x * this.options.acceleration;
+        this.dy += forces.y * this.options.acceleration;
 
         // damp the forces
         this.dx = this.dx * this.options.damping;
@@ -297,8 +272,8 @@
         if (Math.abs(this.dy) < this.options.minSpeed) this.dy = 0;
         if (Math.abs(this.dx)+Math.abs(this.dy)==0) return true;
         //apply velocity vector
-        this.x += this.dx * this.options.timeperiod;
-        this.y += this.dy * this.options.timeperiod;
+        this.x += this.dx * this.options.acceleration;
+        this.y += this.dy * this.options.acceleration;
         this.x = Math.min(this.options.mapArea.x,Math.max(1,this.x));
         this.y = Math.min(this.options.mapArea.y,Math.max(1,this.y));
         // display
@@ -392,7 +367,7 @@
         if (this.obj.activeNode === this) {
             // Attractive force (hooke's law)
             var otherend = this.options.mapArea;
-            var x1 = ((otherend.x / 2) - this.options.centreOffset - this.x);
+            var x1 = ((otherend.x / 2) - this.options.centerOffset - this.x);
             var y1 = ((otherend.y / 2) - this.y);
             var dist = Math.sqrt((x1 * x1) + (y1 * y1));
             var xsign = x1 / Math.abs(x1);
@@ -402,7 +377,7 @@
                 xsign = 0;
             }
             // force is based on radial distance
-            var f = (0.1 * this.options.attract * dist * CENTRE_FORCE) / 1000;
+            var f = (0.1 * this.options.attract * dist * this.options.centerAttraction) / 1000;
             if (Math.abs(dist) > 0) {
                 fx += f * Math.cos(theta) * xsign;
                 fy += f * Math.sin(theta) * xsign;
@@ -457,29 +432,11 @@
     Line.prototype.updatePosition = function(){
         if (this.options.showSublines && (!this.start.hasLayout || !this.end.hasLayout)) return;
         if (!this.options.showSublines && (!this.start.visible || !this.end.visible)) return;
-        if (this.start.visible && this.end.visible) this.size = "thick";
-        else this.size = "thin";
-        if (this.obj.activeNode.parent == this.start || this.obj.activeNode.parent == this.end) this.colour = "red";
-        else this.colour = "blue";
-        this.strokeStyle = "#FFF";
-        switch (this.colour) {
-            case "red":
-//                    this.strokeStyle = "rgba(50, 50, 50, 0.6)";
-                break;
-            case "blue":
-//                    this.strokeStyle = "rgba(10, 10, 10, 0.2)";
-                break;
-        }
-        switch (this.size) {
-            case "thick":
-//                    this.obj.ctx.lineWidth = "3";
-                break;
-            case "thin":
-//                    this.obj.ctx.lineWidth = "1";
-                break;
-        }
+        this.strokeStyle = this.options.lineColor;
+        this.strokeWidth = this.options.lineWidth;
+        this.strokeOpacity = this.options.lineOpacity;
 
-        var c = this.obj.canvas.path("M"+this.start.x+' '+this.start.y+"L"+this.end.x+' '+this.end.y).attr({stroke: this.strokeStyle, opacity:0.2, 'stroke-width':'5px'});                
+        var c = this.obj.canvas.path("M"+this.start.x+' '+this.start.y+"L"+this.end.x+' '+this.end.y).attr({stroke: this.strokeStyle, opacity:this.strokeOpacity, 'stroke-width':this.strokeWidth});                
 
     }
     
@@ -531,9 +488,58 @@
         });
     }
     
-    $.fn.mindmap = function(options) {
+    $.fn.buzzmap = function(options) {
+	  // Define default settings.
+            var options = $.extend({
+		  editable: false,
+		  attract: 10,
+		  repulse: 6,
+		  damping: 0.55,
+		  wallrepulse: 0.4,
+		  mapArea: {
+		      x:-1,
+		      y:-1
+		  },
+		  acceleration: 15,
+		  minSpeed: 0.05,
+		  maxForce: 0.1,
+		  lineWidth: '5px',
+		  lineColor: '#FFF',
+		  lineOpacity: 0.3,
+		  centerOffset:100,
+		  centerAttraction:3,
+		  timeout: 5
+            },options);
+            
 	  var $mindmap = $('ul:eq(0)',this);
-	  var $return = $mindmap._mindmap(options);
+	  var $return = $mindmap.each(function() {
+		  var mindmap = this;
+		  this.mindmapInit = true;
+		  this.nodes = new Array();
+		  this.lines = new Array();
+		  this.activeNode = null;
+		  this.options = options;
+		  this.animateToStatic = function() {
+		      this.activeNode.animateToStatic();
+		  }
+		  $(window).resize(function(){
+		      mindmap.animateToStatic();
+		  });
+	        
+		  //canvas
+		  if (options.mapArea.x==-1) {
+		      options.mapArea.x = $(window).width();
+		  }
+		  if (options.mapArea.y==-1) {
+		      options.mapArea.y = $(window).height();
+		  }
+		  //create drawing area
+		  this.canvas = Raphael(0, 0, options.mapArea.x, options.mapArea.y);
+		  
+		  // Add a class to the object, so that styles can be applied
+		  $(this).addClass('buzzmap-active');
+	   });
+	   
             // add the data to the mindmap
             var root = $('>li',$mindmap).get(0).mynode = $mindmap.addRootNode($('>li>div',$mindmap).html(), {});
 
@@ -551,126 +557,6 @@
                 $('>li', this).each(addLI);
             });
             return $return;
-    };
-    
-    $.fn._mindmap = function(options) {
-        // Define default settings.
-        var options = $.extend({
-	  editable: false,
-            attract: 15,
-            repulse: 6,
-            damping: 0.55,
-            timeperiod: 10,
-            wallrepulse: 0.4,
-            mapArea: {
-                x:-1,
-                y:-1
-            },
-            canvasError: 'alert',
-            minSpeed: 0.05,
-            maxForce: 0.1,
-            showSublines: false,
-            updateIterationCount: 20,
-            showProgressive: true,
-            centreOffset:100,
-            timer: 0
-        },options);
-        
-        
-    
-
-        return this.each(function() {
-            var mindmap = this;
-            this.mindmapInit = true;
-            this.nodes = new Array();
-            this.lines = new Array();
-            this.activeNode = null;
-            this.options = options;
-            this.animateToStatic = function() {
-                this.activeNode.animateToStatic();
-            }
-            $(window).resize(function(){
-                mindmap.animateToStatic();
-            });
-        
-            //canvas
-            if (options.mapArea.x==-1) {
-                options.mapArea.x = $(window).width();
-            }
-            if (options.mapArea.y==-1) {
-                options.mapArea.y = $(window).height();
-            }
-            //create drawing area
-            this.canvas = Raphael(0, 0, options.mapArea.x, options.mapArea.y);
-            
-            // Add a class to the object, so that styles can be applied
-            $(this).addClass('js-mindmap-active');
-            
-            /* Add keyboard support (thanks to wadefs)
-            $(this).keyup(function(event){ 
-                switch (event.which) { 
-                    case 33: // PgUp 
-                    case 38: // Up, move to parent 
-                        if (mindmap.activeNode.parent) {
-                          mindmap.activeNode.parent.el.click();
-                        } 
-                        break; 
-                    case 13: // Enter (change to insert a sibling) 
-                    case 34: // PgDn 
-                    case 40: // Down, move to first child 
-                        if (mindmap.activeNode.children.length) { 
-                          mindmap.activeNode.children[0].el.click();
-                        } 
-                        break; 
-                    case 37: // Left, move to previous sibling 
-                        var activeParent;
-                        if (activeParent = mindmap.activeNode.parent) {
-                            var newNode = null;
-                            if (activeParent.children[0]===mindmap.activeNode) {
-                                newNode = activeParent.children[activeParent.children.length-1];
-                            } else {
-                                for (var i=1;i<activeParent.children.length;i++) {
-                                    if (activeParent.children[i]===mindmap.activeNode) {
-                                        newNode = activeParent.children[i-1];
-                                    }
-                                }
-                            }
-                            if (newNode) {
-                                newNode.el.click();
-                            }
-                        } 
-                        break; 
-                    case 39: // Right, move to next sibling 
-                        var activeParent;
-                        if (activeParent = mindmap.activeNode.parent) {
-                            var newNode = null;
-                            if (activeParent.children[activeParent.children.length-1]===mindmap.activeNode) {
-                                newNode = activeParent.children[0];
-                            } else {
-                                for (var i=activeParent.children.length-2;i>=0;i--) {
-                                    if (activeParent.children[i]===mindmap.activeNode) {
-                                        newNode = activeParent.children[i+1];
-                                    }
-                                }
-                            }
-                            if (newNode) {
-                                newNode.el.click();
-                            }
-                        } 
-                        break; 
-                    case 45: // Ins, insert a child 
-                        break; 
-                    case 46: // Del, delete this node 
-                        break; 
-                    case 27: // Esc, cancel insert 
-                        break; 
-                    case 83: // 'S', save 
-                        break; 
-                }
-                return false; 
-            }); */
-            
-        });
     };
 })(jQuery);
 

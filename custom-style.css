@@ -1,7 +1,7 @@
 body {
 	background:blue;
 }
-.js-mindmap-active div.node {
+.buzzmap-active div.node {
 	color:white;
 	font: 30px/34px Arial, sans-serif;
 	font-size:1em;
@@ -16,18 +16,18 @@ body {
 	border-bottom-right-radius: 20px;
 	
 }
-.js-mindmap-active div.node a {
+.buzzmap-active div.node a {
 	color:#fff;
 }
-.js-mindmap-active div.node.active {
+.buzzmap-active div.node.active {
 	padding:5px 10px !important;
 	border-width:5px !important;
 	color:#fff!important;
 }
-.js-mindmap-active div.node.active a {
+.buzzmap-active div.node.active a {
 	color:#fff;
 }
-.js-mindmap-active .addNode {
+.buzzmap-active .addNode {
 	border:5px solid red !important;
 	color:#fff!important;
 	background-color:Orange!important;

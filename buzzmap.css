@@ -1,4 +1,4 @@
-.js-mindmap-active .node {
+.buzzmap-active .node {
 	position:absolute;
 	top:0;
 	left:0;
@@ -11,13 +11,13 @@
 	text-align:center;
 	text-decoration:none;
 }
-.js-mindmap-active .node.active{
+.buzzmap-active .node.active{
         font-size:1.5em;
 }
 .ui-draggable {
 	position:absolute;
 }
-.js-mindmap-active .node .node-action {
+.buzzmap-active .node .node-action {
 	position:absolute;
 	right:-2em;
 	bottom:-1px;
