@@ -68,15 +68,14 @@
         }
 
         // create the element for display
-//      this.el = $('<a href="'+this.href+'" target="_blank">'+this.name+'</a>');
-        this.el = $('<div>'+this.info.html()+'</div>');
+        this.el = $('<div>'+this.info+'</div>');
         this.el.addClass('node');
-        $('body').prepend(this.el);
+        $('.js-mindmap-active').prepend(this.el);
         
         if (!parent) {
             obj.activeNode = this;
             $(this.el).addClass('active');
-            $(this.el).addClass('root');
+//            $(this.el).addClass('root');
         } else {
             var lineno = obj.lines.length;
             obj.lines[lineno] = new Line(obj, this, parent);
@@ -111,9 +110,11 @@
             }
         });
         
-        this.el.click(function(event){
+        var opennode = function(event){
             if (typeof(opts.onclick)=='function') {
-                opts.onclick(thisnode);
+                var r = opts.onclick(thisnode);
+                if(r == false)
+		return false;
             }
 	  obj.activeNode = thisnode;
 	  
@@ -126,7 +127,54 @@
 	  
             obj.root.animateToStatic();
             return true;
-        });
+        };
+        
+        if(this.options.editable == true)
+        {
+	        this.el.click(opennode);
+	        this.el.click(function(event){
+	                return false;
+	        });
+	        if(thisnode.el.hasClass('addNode'))
+	        {
+			this.el.dblclick(opennode);
+	        }else{
+		this.el.dblclick(function(event){
+			var old_value = thisnode.el.html();
+			thisnode.el.html('');
+			thisnode.el.click(function(){return false;})
+			var $input = $('<input type="text"/>').val(old_value);
+			$input.blur(function(event){
+					thisnode.el.html(old_value);
+				})
+				.click(function(){return false;})
+				.keyup(function(event) {
+					var keycode = event.which;
+					var type = this.tagName.toLowerCase();
+					if(keycode == 27) { // escape
+						thisnode.el.html(old_value);
+						obj.root.animateToStatic();
+					}
+					else if(keycode == 13) { // enter
+						thisnode.el.html('');
+						$($input.val()).appendTo(thisnode.el);
+						thisnode.el.addClass('active');
+						obj.root.animateToStatic();
+					}
+					return true;
+				})
+				.appendTo(thisnode.el)
+			if(thisnode != obj.root)
+				$('<a href="#">[x]</a>').click(function(){
+					thisnode.removeNode();
+					obj.root.animateToStatic();
+				}).appendTo(thisnode.el);
+			$input.focus().select();
+		});
+	        }
+        }else{
+                  this.el.click(opennode);
+        }
 
     };
 
@@ -435,17 +483,43 @@
 
     }
     
-    $.fn.addNode = function (parent, name, options) {
+    $.fn.addNode = function (parent, name, options, addNode) {
         var obj = this[0];
         var node = obj.nodes[obj.nodes.length] = new Node(obj, name, parent, options);
         console.log(obj.root);
+        
+        //add a "+"-Node for adding new nodes
+        if(node.options.editable == true && !addNode)
+		this.addNewNode(node);
+        
         obj.root.animateToStatic();
         return node;
     }
+    
+    $.fn.addNewNode = function (parent)
+    {
+	var parent = parent;
+	var mindmap = this;
+	node = this.addNode(parent, '+',{
+		onclick:function(event)
+		{
+			newnode = mindmap.addNode(parent, '...', {});
+			newnode.el.trigger('dblclick');
+			return false;
+		}
+	}, true);
+	node.el.addClass('addNode');
+	return node;
+    }
 
-    $.fn.addRootNode = function (name, opts) {
-        var node = this[0].nodes[0] = new Node(this[0], name, null, opts);
+    $.fn.addRootNode = function (content, opts) {
+        var node = this[0].nodes[0] = new Node(this[0], content, null, opts);
         this[0].root = node;
+        
+        //add a "+"-Node for adding new nodes
+        if(node.options.editable == true)
+		this.addNewNode(node);
+        
         return node;
     }
     
@@ -458,37 +532,22 @@
     }
     
     $.fn.mindmap = function(options) {
-	  var $mindmap = $(this);
+	  var $mindmap = $('ul:eq(0)',this);
 	  var $return = $mindmap._mindmap(options);
             // add the data to the mindmap
-            var root = $('>ul>li',$mindmap).get(0).mynode = $mindmap.addRootNode($('>ul>li>div',$mindmap), {
-                onclick:function(node) {
-                    $(node.obj.activeNode.content).each(function() {
-                        this.hide();
-                    });
-                }
-            });
+            var root = $('>li',$mindmap).get(0).mynode = $mindmap.addRootNode($('>li>div',$mindmap).html(), {});
 
-            $('>ul>li',$mindmap).hide();
+            $('>li',$mindmap).hide();
             var addLI = function() {
                 var parentnode = $(this).parents('li').get(0);
                 if (typeof(parentnode)=='undefined') parentnode=root;
                     else parentnode=parentnode.mynode;
                 
-                this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this), {
-                    onclick:function(node) {
-                        $(node.obj.activeNode.content).each(function() {
-                            this.hide();
-                        });
-                        $(node.content).each(function() {
-                            this.show();
-                        });
-                    }
-                });
+                this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
                 $(this).hide();
                 $('>ul>li', this).each(addLI);
             };
-            $('>ul>li>ul',$mindmap).each(function() { 
+            $('>li>ul',$mindmap).each(function() { 
                 $('>li', this).each(addLI);
             });
             return $return;
@@ -497,6 +556,7 @@
     $.fn._mindmap = function(options) {
         // Define default settings.
         var options = $.extend({
+	  editable: false,
             attract: 15,
             repulse: 6,
             damping: 0.55,
@@ -527,7 +587,7 @@
             this.activeNode = null;
             this.options = options;
             this.animateToStatic = function() {
-                this.root.animateToStatic();
+                this.activeNode.animateToStatic();
             }
             $(window).resize(function(){
                 mindmap.animateToStatic();
@@ -546,7 +606,7 @@
             // Add a class to the object, so that styles can be applied
             $(this).addClass('js-mindmap-active');
             
-            // Add keyboard support (thanks to wadefs)
+            /* Add keyboard support (thanks to wadefs)
             $(this).keyup(function(event){ 
                 switch (event.which) { 
                     case 33: // PgUp 
@@ -608,7 +668,7 @@
                         break; 
                 }
                 return false; 
-            }); 
+            }); */
             
         });
     };

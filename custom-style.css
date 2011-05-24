@@ -1,4 +1,4 @@
-.js-mindmap-active {
+body {
 	background:blue;
 }
 .js-mindmap-active div.node {
@@ -16,7 +16,7 @@
 	border-bottom-right-radius: 20px;
 	
 }
-.js-mindmap-active div.node * {
+.js-mindmap-active div.node a {
 	color:#fff;
 }
 .js-mindmap-active div.node.active {
@@ -24,6 +24,11 @@
 	border-width:5px !important;
 	color:#fff!important;
 }
-.js-mindmap-active div.node.active * {
+.js-mindmap-active div.node.active a {
 	color:#fff;
+}
+.js-mindmap-active .addNode {
+	border:5px solid red !important;
+	color:#fff!important;
+	background-color:Orange!important;
 }
