@@ -113,17 +113,17 @@
 	        this.el.click(function(event){
 	                return false;
 	        });
-	        if(thisnode.el.hasClass('addNode'))
-	        {
-			this.el.dblclick(opennode);
-	        }else{
-		this.el.dblclick(function(event){
-			var old_value = thisnode.el.html();
+	        this.el.dblclick(function(event){
+			if(thisnode.el.hasClass('addNode'))
+				return true;
+			
+			var old_value = $('span:eq(0)', thisnode.el).html();
 			thisnode.el.html('');
 			thisnode.el.click(function(){return false;})
 			var $input = $('<input type="text"/>').val(old_value);
 			$input.blur(function(event){
-					thisnode.el.html(old_value);
+					if($input.val() != '')
+						thisnode.el.html($('<span>'+$input.val()+'</span>'));
 				})
 				.click(function(){return false;})
 				.keyup(function(event) {
@@ -134,8 +134,7 @@
 						obj.root.animateToStatic();
 					}
 					else if(keycode == 13) { // enter
-						thisnode.el.html('');
-						$($input.val()).appendTo(thisnode.el);
+						thisnode.el.html($('<span>'+$input.val()+'</span>'));
 						thisnode.el.addClass('active');
 						obj.root.animateToStatic();
 					}
@@ -143,13 +142,12 @@
 				})
 				.appendTo(thisnode.el)
 			if(thisnode != obj.root)
-				$('<a href="#">[x]</a>').click(function(){
+				$('<a style="margin-left:1em;" href="#">[x]</a>').click(function(){
 					thisnode.removeNode();
 					obj.root.animateToStatic();
 				}).appendTo(thisnode.el);
 			$input.focus().select();
 		});
-	        }
         }else{
                   this.el.click(opennode);
         }
@@ -507,7 +505,7 @@
 		  lineColor: '#FFF',
 		  lineOpacity: 0.3,
 		  centerOffset:100,
-		  centerAttraction:3,
+		  centerAttraction:0,
 		  timeout: 5
             },options);
             
