@@ -123,7 +123,10 @@
 			var $input = $('<input type="text"/>').val(old_value);
 			$input.blur(function(event){
 					if($input.val() != '')
+					{
 						thisnode.el.html($('<span>'+$input.val()+'</span>'));
+						obj.root.animateToStatic();
+					}
 				})
 				.click(function(){return false;})
 				.keyup(function(event) {
@@ -136,6 +139,10 @@
 					else if(keycode == 13) { // enter
 						thisnode.el.html($('<span>'+$input.val()+'</span>'));
 						thisnode.el.addClass('active');
+						
+						if (typeof(obj.options.onchange)=='function') {
+							obj.options.onchange(obj.root.serialize());
+						}
 						obj.root.animateToStatic();
 					}
 					return true;
@@ -144,6 +151,9 @@
 			if(thisnode != obj.root)
 				$('<a style="margin-left:1em;" href="#">[x]</a>').click(function(){
 					thisnode.removeNode();
+					if (typeof(obj.options.onchange)=='function') {
+							obj.options.onchange(obj.root.serialize());
+					}
 					obj.root.animateToStatic();
 				}).appendTo(thisnode.el);
 			$input.focus().select();
@@ -153,6 +163,22 @@
         }
 
     };
+    
+    Node.prototype.serialize = function()
+    {
+	var string = '{"node":"' + encodeURI(this.el.html()) + '","children":[';
+	var count = 0;
+	$.each(this.children, function(){
+		if(!this.el.hasClass('addNode'))
+		{
+			count++;
+			if(count > 1)
+				string = string+','
+			string = string+this.serialize();
+		}
+	});
+	return string+']}';
+    }
 
     // ROOT NODE ONLY:  control animation loop
     Node.prototype.animateToStatic = function() {
@@ -487,9 +513,14 @@
     }
     
     $.fn.buzzmap = function(options) {
+	  var $mindmap = $('ul:eq(0)',this);
+	  if(!$mindmap.hasClass('buzzmap-active'))
+	  {
+	  
 	  // Define default settings.
             var options = $.extend({
 		  editable: false,
+		  onchange: function(data){},
 		  attract: 10,
 		  repulse: 6,
 		  damping: 0.55,
@@ -506,11 +537,10 @@
 		  lineOpacity: 0.3,
 		  centerOffset:100,
 		  centerAttraction:0,
-		  timeout: 5
+		  timeout: 5,
             },options);
             
-	  var $mindmap = $('ul:eq(0)',this);
-	  var $return = $mindmap.each(function() {
+	  return $mindmap.each(function() {
 		  var mindmap = this;
 		  this.mindmapInit = true;
 		  this.nodes = new Array();
@@ -536,25 +566,25 @@
 		  
 		  // Add a class to the object, so that styles can be applied
 		  $(this).addClass('buzzmap-active');
-	   });
 	   
-            // add the data to the mindmap
-            var root = $('>li',$mindmap).get(0).mynode = $mindmap.addRootNode($('>li>div',$mindmap).html(), {});
+		  // add the data to the mindmap
+		  var root = $('>li',this).get(0).mynode = $mindmap.addRootNode($('>li>div',this).html(), {});
 
-            $('>li',$mindmap).hide();
-            var addLI = function() {
-                var parentnode = $(this).parents('li').get(0);
-                if (typeof(parentnode)=='undefined') parentnode=root;
-                    else parentnode=parentnode.mynode;
-                
-                this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
-                $(this).hide();
-                $('>ul>li', this).each(addLI);
-            };
-            $('>li>ul',$mindmap).each(function() { 
-                $('>li', this).each(addLI);
-            });
-            return $return;
+		  $('>li',this).hide();
+		  var addLI = function() {
+		      var parentnode = $(this).parents('li').get(0);
+		      if (typeof(parentnode)=='undefined') parentnode=root;
+			else parentnode=parentnode.mynode;
+		      
+		      this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
+		      $(this).hide();
+		      $('>ul>li', this).each(addLI);
+		  };
+		  $('>li>ul',mindmap).each(function() {
+		      $('>li', this).each(addLI);
+		  });
+	  });
+	}
     };
 })(jQuery);
 
