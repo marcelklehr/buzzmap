@@ -40,10 +40,6 @@
         this.options = obj.options;
 
         this.info = info;
-        this.href = opts.href;
-        if (opts.url) {
-            this.url = opts.url;
-        }
 
         // create the element for display
         this.el = $('<div>'+this.info+'</div>');
