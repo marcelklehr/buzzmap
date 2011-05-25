@@ -84,6 +84,9 @@
 
         this.el.draggable({
             drag:function() {
+	      if (typeof(obj.options.ondrag)=='function') {
+			obj.options.ondrag(obj.root);
+	      }
                 obj.root.animateToStatic();
             }
         });
@@ -157,6 +160,7 @@
 					obj.root.animateToStatic();
 				}).appendTo(thisnode.el);
 			$input.focus().select();
+			return false;
 		});
         }else{
                   this.el.click(opennode);
@@ -233,7 +237,9 @@
 	  {
 	   if(!this.parent.el.hasClass('active'))
 	   {
-		  // TODO hide me!
+		  if (typeof(obj.options.onhide)=='function') {
+			obj.options.onhide(this);
+		  }
 		  this.el.hide();
 		  this.visible = false;
              }
@@ -244,6 +250,9 @@
           if (this.el.hasClass('active') || this.parent.el.hasClass('active')) {
             this.el.show();
             this.visible = true;
+            if (typeof(obj.options.onshow)=='function') {
+		obj.options.onshow(this);
+	  }
           }
         }
         this.drawn = true;
@@ -521,6 +530,9 @@
             var options = $.extend({
 		  editable: false,
 		  onchange: function(data){},
+		  ondrag: function(root){},
+		  onshow: function(node){},
+		  onhide: function(node){},
 		  attract: 10,
 		  repulse: 6,
 		  damping: 0.55,
