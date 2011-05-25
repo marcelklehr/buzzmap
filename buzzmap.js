@@ -144,7 +144,7 @@
 						thisnode.el.addClass('active');
 						
 						if (typeof(obj.options.onchange)=='function') {
-							obj.options.onchange(obj.root.serialize());
+							obj.options.onchange(thisnode, obj.root.serialize());
 						}
 						obj.root.animateToStatic();
 					}
@@ -153,9 +153,12 @@
 				.appendTo(thisnode.el)
 			if(thisnode != obj.root)
 				$('<a style="margin-left:1em;" href="#">[x]</a>').click(function(){
+					if (typeof(obj.options.onremove)=='function') {
+						obj.options.onremove(thisnode);
+					}
 					thisnode.removeNode();
 					if (typeof(obj.options.onchange)=='function') {
-							obj.options.onchange(obj.root.serialize());
+						obj.options.onchange(thisnode, obj.root.serialize());
 					}
 					obj.root.animateToStatic();
 				}).appendTo(thisnode.el);
@@ -237,8 +240,8 @@
 	  {
 	   if(!this.parent.el.hasClass('active'))
 	   {
-		  if (typeof(obj.options.onhide)=='function') {
-			obj.options.onhide(this);
+		  if (typeof(this.obj.options.onhide)=='function') {
+			this.obj.options.onhide(this);
 		  }
 		  this.el.hide();
 		  this.visible = false;
@@ -250,8 +253,8 @@
           if (this.el.hasClass('active') || this.parent.el.hasClass('active')) {
             this.el.show();
             this.visible = true;
-            if (typeof(obj.options.onshow)=='function') {
-		obj.options.onshow(this);
+            if (typeof(this.obj.options.onshow)=='function') {
+		this.obj.options.onshow(this);
 	  }
           }
         }
@@ -529,10 +532,11 @@
 	  // Define default settings.
             var options = $.extend({
 		  editable: false,
-		  onchange: function(data){},
+		  onchange: function(node, data){},
 		  ondrag: function(root){},
 		  onshow: function(node){},
 		  onhide: function(node){},
+		  onremove: function(node){},
 		  attract: 10,
 		  repulse: 6,
 		  damping: 0.55,
