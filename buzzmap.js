@@ -169,7 +169,7 @@
     
     Node.prototype.serialize = function()
     {
-	var string = '{"node":"' + encodeURI(this.el.html()) + '","children":[';
+	var string = '{"node":"' + this.el.html().replace(/"/g, '\\"') + '","children":[';
 	var count = 0;
 	$.each(this.children, function(){
 		if(!this.el.hasClass('addNode'))
@@ -230,21 +230,24 @@
     Node.prototype.display = function() {
         if (this.visible) {
           // if: I'm not active AND my parent's not active AND my children aren't active ...
-          if (!this.el.hasClass('active'))
-          {
 	  if(this.parent != null)
 	  {
-	   if(!this.parent.el.hasClass('active'))
-	   {
+	    if(!this.parent.el.hasClass('active'))
+	    {
 		  if (typeof(this.obj.options.onhide)=='function') {
 			this.obj.options.onhide(this);
 		  }
 		  this.el.hide();
 		  this.visible = false;
-             }
+              }
             }
-            
-          }
+            if(!this.el.hasClass('active'))
+            {
+		$.each(this.children, function(index,node)
+		{
+			node.el.removeClass('active');
+		});
+            }
         } else {
           if (this.el.hasClass('active') || this.parent.el.hasClass('active')) {
             this.el.show();
@@ -512,14 +515,6 @@
         return node;
     }
     
-    $.fn.removeNode = function (name) {
-        return this.each(function() {
-//            if (!!this.mindmapInit) return false;
-            //remove a node matching the anme
-//            alert(name+' removed');
-        });
-    }
-    
     $.fn.buzzmap = function(options) {
 	  var $mindmap = $('ul:eq(0)',this);
 	  if(!$mindmap.hasClass('buzzmap-active'))
@@ -527,6 +522,9 @@
 	  
 	  // Define default settings.
             var options = $.extend({
+		  load: {
+		      data:null
+		  },
 		  editable: false,
 		  onchange: function(node, data){},
 		  ondrag: function(root){},
@@ -549,7 +547,7 @@
 		  lineOpacity: 0.3,
 		  centerOffset:100,
 		  centerAttraction:0,
-		  timeout: 5,
+		  timeout: 5
             },options);
             
 	  return $mindmap.each(function() {
@@ -578,23 +576,44 @@
 		  
 		  // Add a class to the object, so that styles can be applied
 		  $(this).addClass('buzzmap-active');
-	   
+		  
 		  // add the data to the mindmap
-		  var root = $('>li',this).get(0).mynode = $mindmap.addRootNode($('>li>div',this).html(), {});
+		  if(options.loadData)
+		  {
+			var map = $.parseJSON(options.loadData);
+			var nodeCreate = function(parent, children)
+			{
+				$.each(children, function(index,object)
+				{
+					node = $mindmap.addNode(parent, decodeURI(object.node), {})
+					nodeCreate(node, object.children);
+				});
+			};
+			
+			
+			var root = $mindmap.addRootNode(decodeURI(map.node), {});
+			$.each(map.children, function(index,object)
+			{
+				node = $mindmap.addNode(root, decodeURI(object.node), {})
+				nodeCreate(node, object.children);
+			});
+		  }else{
+			  var root = $('>li',this).get(0).mynode = $mindmap.addRootNode($('>li>div',this).html(), {});
 
-		  $('>li',this).hide();
-		  var addLI = function() {
-		      var parentnode = $(this).parents('li').get(0);
-		      if (typeof(parentnode)=='undefined') parentnode=root;
-			else parentnode=parentnode.mynode;
-		      
-		      this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
-		      $(this).hide();
-		      $('>ul>li', this).each(addLI);
-		  };
-		  $('>li>ul',mindmap).each(function() {
-		      $('>li', this).each(addLI);
-		  });
+			  $('>li',this).hide();
+			  var addLI = function() {
+			      var parentnode = $(this).parents('li').get(0);
+			      if (typeof(parentnode)=='undefined') parentnode=root;
+				else parentnode=parentnode.mynode;
+			      
+			      this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
+			      $(this).hide();
+			      $('>ul>li', this).each(addLI);
+			  };
+			  $('>li>ul',mindmap).each(function() {
+			      $('>li', this).each(addLI);
+			  });
+		  }
 	  });
 	}
     };

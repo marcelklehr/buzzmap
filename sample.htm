@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>buzzmap</title>
+  <title>buzzmap - Demo</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link href="buzzmap.css" rel="stylesheet" type="text/css"/>
   <link href="custom-style.css" type="text/css" rel="stylesheet"/>
@@ -15,14 +15,23 @@
   <!-- Raphael for SVG support (won't work on android) -->
   <script src="raphael.min.js" type="text/javascript"></script>
 
-  <!-- js-Mindmap -->
+  <!-- buzzmap -->
   <script src="buzzmap.js" type="text/javascript"></script>
 
   <!-- Kick everything off -->
   <script type="text/javascript">
   <!--
+  if(document.cookie)
+  {
+	var cookie = document.cookie.replace('buzzmap=', '');
+  }else{var cookie = null;}
+  
   $(document).ready(function (){
-	$('body').buzzmap({});
+	$('body').buzzmap({
+		//editable: true,
+		onchange: function(node,data){document.cookie = 'buzzmap='+data;},
+		loadData: cookie
+	});
   });
   -->
   </script>
@@ -58,9 +67,9 @@
       	  <li><div><span><a href="sample.htm" target="_blank">sample.htm</a></span></div></li> 
             <li><div><span><a href="js-mindmap.js" target="_blank">buzzmap.js</a></span></div></li> 
             <li><div><span><a href="js-mindmap.css" target="_blank">buzzmap.css</a></span></div></li>
-            <li><div><span><a href="raphael-min.js" target="_blank">raphael.min.js</a></span></div></li>
-            <li><div><span><a href="jquery-1.4.3.min.js" target="_blank">jquery.min.js</a></span></div></li>
-            <li><div><span><a href="jquery-ui-1.8.12.min.js" target="_blank">jquery-ui.min.js</a></span></div></li>
+            <li><div><span><a href="raphael.min.js" target="_blank">raphael.min.js</a></span></div></li>
+            <li><div><span><a href="jquery.min.js" target="_blank">jquery.min.js</a></span></div></li>
+            <li><div><span><a href="jquery-ui.min.js" target="_blank">jquery-ui.min.js</a></span></div></li>
           </ul>
         </li>
 
