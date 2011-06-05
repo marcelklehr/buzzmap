@@ -26,12 +26,6 @@
  THE SOFTWARE.
 
 */
-
-/*
-    Things to do:
-        - save to json
-
-*/
 (function($){
 
     // Define all Node related functions.
@@ -478,7 +472,7 @@
     $.fn.addNode = function (parent, name, options, addNode) {
         var obj = this[0];
         var node = obj.nodes[obj.nodes.length] = new Node(obj, name, parent, options);
-        console.log(obj.root);
+        //console.log(obj.root);alert('addNode');
         
         //add a "+"-Node for adding new nodes
         if(node.options.editable == true && !addNode)
@@ -539,7 +533,7 @@
 		      x:-1,
 		      y:-1
 		  },
-		  acceleration: 15,
+		  acceleration: 17,
 		  minSpeed: 0.05,
 		  maxForce: 0.1,
 		  lineWidth: '5px',
@@ -547,7 +541,7 @@
 		  lineOpacity: 0.3,
 		  centerOffset:100,
 		  centerAttraction:0,
-		  timeout: 5
+		  timeout: 4
             },options);
             
 	  return $mindmap.each(function() {
@@ -601,16 +595,22 @@
 			  var root = $('>li',this).get(0).mynode = $mindmap.addRootNode($('>li>div',this).html(), {});
 
 			  $('>li',this).hide();
-			  var addLI = function() {
+			  var addLI = function()
+			  {
 			      var parentnode = $(this).parents('li').get(0);
-			      if (typeof(parentnode)=='undefined') parentnode=root;
-				else parentnode=parentnode.mynode;
-			      
+			      if (typeof(parentnode)=='undefined')
+			      {
+				parentnode=root;
+			      }
+			      else {
+				parentnode=parentnode.mynode;
+			      }
 			      this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
 			      $(this).hide();
 			      $('>ul>li', this).each(addLI);
 			  };
-			  $('>li>ul',mindmap).each(function() {
+			  $('>li>ul', $mindmap).each(function() {
+			      
 			      $('>li', this).each(addLI);
 			  });
 		  }

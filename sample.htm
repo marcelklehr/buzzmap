@@ -30,7 +30,8 @@
 	$('body').buzzmap({
 		//editable: true,
 		onchange: function(node,data){document.cookie = 'buzzmap='+data;},
-		loadData: cookie
+		loadData: cookie,
+		minSpeed:0.08
 	});
   });
   -->
@@ -52,7 +53,7 @@
           </ul>
 
         </li>
-        <li><div><span>Functions</a></span></div>
+        <li><div><span>Functions</span></div>
 
           <ul>
           	<li><div><span>Mindmapping</span></div></li> 
@@ -73,13 +74,13 @@
           </ul>
         </li>
 
-        <li><div><span>Licence</a></span></div>
+        <li><div><span>Licence</span></div>
           <ul>
             <li><div><span>MIT Licence</span></div></li> 
             <li><div><span><a href="LICENCE.txt" target="_blank">Conditions</a></span></div></li>
           </ul>
          
-        <li><div><span>Secret</a></span></div>
+        <li><div><span>Secret</span></div>
           <ul>
             <li><div><span>It's free...</span></div></li> 
           </ul>
