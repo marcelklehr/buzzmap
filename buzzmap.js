@@ -564,31 +564,33 @@
 	  
 	  // Define default settings.
             var options = $.extend({
-		  load: {
-		      data:null
+		  mapArea: {
+		      x:-1,
+		      y:-1
 		  },
+		  loadData:null,
 		  editable: false,
+		  
 		  onchange: function(node, data){},
 		  ondrag: function(root){},
 		  onshow: function(node){},
 		  onhide: function(node){},
 		  onremove: function(node){},
-		  attract: 10,
+		  
+		  attract: 11,
 		  repulse: 6,
-		  damping: 0.55,
-		  wallrepulse: 0.4,
-		  mapArea: {
-		      x:-1,
-		      y:-1
-		  },
-		  acceleration: 17,
-		  minSpeed: 0.05,
-		  maxForce: 0.1,
+		  maxForce: 0.15,
+		  damping: 0.7,
+		  acceleration: 8,
+		  
 		  lineWidth: '5px',
 		  lineColor: '#FFF',
 		  lineOpacity: 0.3,
+		  
+		  wallrepulse: 0.4,
 		  centerOffset:100,
 		  centerAttraction:0,
+		  minSpeed: 0.05,
 		  timeout: 4
             },options);
             
