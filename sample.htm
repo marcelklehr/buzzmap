@@ -27,12 +27,15 @@
   }else{var cookie = null;}
   
   $(document).ready(function (){
-	$('body').buzzmap({
-		//editable: true,
+	var $mindmap = $('body').buzzmap({
+		editable: true,
 		onchange: function(node,data){document.cookie = 'buzzmap='+data;},
 		loadData: cookie,
-		minSpeed:0.08
-	});
+		maxForce:0.15,
+		attract:12,
+		damping: 0.7,
+		acceleration:8
+	});	
   });
   -->
   </script>

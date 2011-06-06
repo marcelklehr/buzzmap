@@ -102,59 +102,19 @@
         
         if(this.options.editable == true)
         {
-	        this.el.click(opennode);
-	        this.el.click(function(event){
+	        this.el.click(function(event)
+	        {
+		      //littlepuffer time for enabling dblclick
+	                setTimeout(function()
+	                {
+			opennode();
+	                },150);
 	                return false;
 	        });
-	        this.el.dblclick(function(event){
-			if(thisnode.el.hasClass('addNode'))
-				return true;
-			
-			var old_value = $('span:eq(0)', thisnode.el).html();
-			thisnode.el.html('');
-			thisnode.el.click(function(){return false;})
-			var $input = $('<input type="text"/>').val(old_value);
-			$input.blur(function(event){
-					if($input.val() != '')
-					{
-						thisnode.el.html($('<span>'+$input.val()+'</span>'));
-						obj.root.animateToStatic();
-					}
-				})
-				.click(function(){return false;})
-				.keyup(function(event) {
-					var keycode = event.which;
-					var type = this.tagName.toLowerCase();
-					if(keycode == 27) { // escape
-						thisnode.el.html(old_value);
-						obj.root.animateToStatic();
-					}
-					else if(keycode == 13) { // enter
-						thisnode.el.html($('<span>'+$input.val()+'</span>'));
-						thisnode.el.addClass('active');
-						
-						if (typeof(obj.options.onchange)=='function') {
-							obj.options.onchange(thisnode, obj.root.serialize());
-						}
-						obj.root.animateToStatic();
-					}
-					return true;
-				})
-				.appendTo(thisnode.el)
-			if(thisnode != obj.root)
-				$('<a style="margin-left:1em;" href="#">[x]</a>').click(function(){
-					if (typeof(obj.options.onremove)=='function') {
-						obj.options.onremove(thisnode);
-					}
-					thisnode.removeNode();
-					if (typeof(obj.options.onchange)=='function') {
-						obj.options.onchange(thisnode, obj.root.serialize());
-					}
-					obj.root.animateToStatic();
-				}).appendTo(thisnode.el);
-			$input.focus().select();
-			return false;
-		});
+	        this.el.dblclick(function(event)
+	        {
+	                thisnode.edit();
+	        });
         }else{
                   this.el.click(opennode);
         }
@@ -175,6 +135,90 @@
 		}
 	});
 	return string+']}';
+    }
+    
+    //edit this node's label
+    Node.prototype.edit = function()
+    {
+	var thisnode = this;
+	
+	//is a helper node - not editable
+	if(this.el.hasClass('addNode'))
+		return true;
+	//store current value
+	var old_value = $(':eq(0)', this.el).html();
+	
+	//clear label
+	this.el.html('');
+	
+	//submit callback
+	var submit = function()
+	{
+		thisnode.el.html($('<span>'+$input.val()+'</span>'));
+				
+		//callback
+		if (typeof(thisnode.obj.options.onchange)=='function') {
+			thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
+		}
+		thisnode.obj.root.animateToStatic();
+	}
+	
+	var cancel = function()
+	{
+		thisnode.el.html($('<span>'+old_value+'</span>'));
+		
+		//callback
+		if (typeof(thisnode.obj.options.onchange)=='function') {
+			thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
+		}
+		thisnode.obj.root.animateToStatic();
+	}
+	
+	var $input = $('<input type="text"/>').val(old_value);
+	$input.blur(function(event)
+	{
+		if($.trim(old_value) != '')
+		{
+			cancel();
+		}
+	});
+	//prevent click->opennode
+	$input.click(function(){return false;});
+	
+	$input.keyup(function(event) {
+			var keycode = event.which;
+			var type = this.tagName.toLowerCase();
+			
+			//cancel
+			if(keycode == 27) // escape
+			{
+				cancel();
+			}
+			
+			//submit
+			else if(keycode == 13) // enter
+			{
+				submit();
+			}
+			return true;
+	});
+	$input.appendTo(thisnode.el);
+	
+	if(thisnode != this.obj.root)
+	{
+		$('<a style="margin-left:1em;" href="#">[x]</a>').click(function(){
+					if (typeof(thisnode.obj.options.onremove)=='function') {
+						thisnode.obj.options.onremove(thisnode);
+					}
+					thisnode.removeNode();
+					if (typeof(obj.options.onchange)=='function') {
+						thisnode.obj.options.onchange(thisnode, obj.root.serialize());
+					}
+					thisnode.obj.root.animateToStatic();
+		}).appendTo(thisnode.el);
+	}
+	$input.focus().select();
+	return false;
     }
 
     // ROOT NODE ONLY:  control animation loop
@@ -214,8 +258,12 @@
     Node.prototype.findEquilibrium = function() {
         var Static = true;
         Static = this.display() && Static;
-        for (var i=0;i<this.children.length;i++) {
-            Static = this.children[i].findEquilibrium() && Static;
+        for (var i=0;i<this.children.length;i++)
+        {
+	  if(this.children[i].visible || this.el.hasClass('active'))
+	  {
+		Static = this.children[i].findEquilibrium() && Static;
+	  }
         }
         return Static;
     }
