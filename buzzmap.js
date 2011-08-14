@@ -1,613 +1,675 @@
-/*
- buzzmap
- Copyright (c) 2011 Marcel Klehr
- 
- Original js-mindmap
- Copyright (c) 2008/09/10 Kenneth Kufluk http://kenneth.kufluk.com/
- 
- MIT (X11) license
-  
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+/**
+ * buzzmap
+ * Copyright (c) 2011 Marcel Klehr
+ *
+ * based on js-mindmap
+ * Copyright (c) 2008/09/10 Kenneth Kufluk http://kenneth.kufluk.com/
+ * 
+ * MIT (X11) license
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+(function ($) {
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
+/* Define Node */
+	var Node = function (obj, info, parent)
+	{
 
-*/
-(function($){
+	/* Define Properties */
+		this.obj      = obj;
+		this.info     = info;
+		this.parent   = parent;
+		this.children = [];
 
-    // Define all Node related functions.
-    var Node = function(obj, info, parent, opts) {
-        this.obj = obj;
-        this.options = obj.options;
+		// animation handling
+		this.moving = false;
+		this.moveTimer = 0;
+		this.obj.movementStopped = false;
+		this.visible = true;
+		this.hasLayout = true;
+		this.x = 1;
+		this.y = 1;
+		this.dx = 0;
+		this.dy = 0;
+		this.hasPosition = false;
 
-        this.info = info;
+	/* create the html element*/
+		this.el = $('<div>'+this.info+'</div>');
+		this.el.css('position','absolute');
+		this.el.addClass('node');
+		$('.buzzmap-active').prepend(this.el);
 
-        // create the element for display
-        this.el = $('<div>'+this.info+'</div>');
-        this.el.addClass('node');
-        $('.buzzmap-active').prepend(this.el);
-        
-        if (!parent) {
-            obj.activeNode = this;
-            $(this.el).addClass('active');
-//            $(this.el).addClass('root');
-        } else {
-            var lineno = obj.lines.length;
-            obj.lines[lineno] = new Line(obj, this, parent);
-        }
-        this.parent = parent;
-        this.children = [];
-        if (this.parent) {
-            this.parent.children.push(this);
-        }
-        
-        // animation handling
-        this.moving = false;
-        this.moveTimer = 0;
-        this.obj.movementStopped = false;
-        this.visible = true;
-        this.hasLayout = true;
-        this.x = 1;
-        this.y = 1;
-        this.dx = 0;
-        this.dy = 0;
-        this.hasPosition = false;
-        
-        this.content = []; // array of content elements to display onclick;
-        
-        this.el.css('position','absolute');        
-
-        var thisnode = this;
-
-        this.el.draggable({
-            drag:function() {
-	      if (typeof(obj.options.ondrag)=='function') {
-			obj.options.ondrag(obj.root);
-	      }
-                obj.root.animateToStatic();
-            }
-        });
-        
-        var opennode = function(event){
-            if (typeof(opts.onclick)=='function') {
-                var r = opts.onclick(thisnode);
-                if(r == false)
-		return false;
-            }
-	  obj.activeNode = thisnode;
-	  
-	  if(thisnode.children.length > 0)
-	  {
-		obj.activeNode.el.toggleClass('active');
-		obj.root.animateToStatic();
-		return false;
-	  }
-	  
-            obj.root.animateToStatic();
-            return true;
-        };
-        
-        if(this.options.editable == true)
-        {
-	        this.el.click(function(event)
-	        {
-		      //littlepuffer time for enabling dblclick
-	                setTimeout(function()
-	                {
-			opennode();
-	                },150);
-	                return false;
-	        });
-	        this.el.dblclick(function(event)
-	        {
-	                thisnode.edit();
-	        });
-        }else{
-                  this.el.click(opennode);
-        }
-
-    };
-    
-    Node.prototype.serialize = function()
-    {
-	var string = '{"node":"' + this.el.html().replace(/"/g, '\\"') + '","children":[';
-	var count = 0;
-	$.each(this.children, function(){
-		if(!this.el.hasClass('addNode'))
+	/* root node */
+		if(!this.parent)
 		{
-			count++;
-			if(count > 1)
-				string = string+','
-			string = string+this.serialize();
+			// make active
+			this.el.addClass('active');
 		}
-	});
-	return string+']}';
-    }
-    
-    //edit this node's label
-    Node.prototype.edit = function()
-    {
-	var thisnode = this;
-	
-	//is a helper node - not editable
-	if(this.el.hasClass('addNode'))
-		return true;
-	//store current value
-	var old_value = $(':eq(0)', this.el).html();
-	
-	//clear label
-	this.el.html('');
-	
-	//submit callback
-	var submit = function()
-	{
-		thisnode.el.html($('<span>'+$input.val()+'</span>'));
-				
-		//callback
-		if (typeof(thisnode.obj.options.onchange)=='function') {
-			thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
+	/* child node */
+		else
+		{
+			// draw a line to parent
+			this.obj.lines[this.obj.lines.length] = new Line(obj, this, parent);
+			// say hello to parent
+			this.parent.children.push(this);
 		}
-		thisnode.obj.root.animateToStatic();
-	}
-	
-	var cancel = function()
-	{
-		thisnode.el.html($('<span>'+old_value+'</span>'));
+
+	/* make node interactive */
+		var thisnode = this;
+		var opennode = function (event)
+		{
+			//show children
+			if(thisnode.children.length > 0)
+			{
+				thisnode.el.toggleClass('active');
+				thisnode.obj.root.animateToStatic();
+				return false;
+			}
+
+			return true;
+		};
+
+		// drag
+		this.el.draggable({
+			drag:function ()
+			{
+				// execute ondrag callback
+				if (typeof(thisnode.obj.options.ondrag) === 'function')
+				{
+					thisnode.obj.options.ondrag(thisnode.obj.root);
+				}
+				// animate map
+				thisnode.obj.root.animateToStatic();
+			}
+		});
+
+		// edit
+		if(this.obj.options.editable === true)
+		{
+			this.el.dblclick(function (event)
+			{
+				thisnode.edit();
+			});
+		}
+
+		// click
+		this.el.click(function (event)
+		{
+			if(thisnode.obj.options.editable === true)
+			{
+				//little puffer time for enabling dblclick
+				setTimeout(opennode,150);
+			}else
+			{
+				opennode();
+			}
+		});
 		
-		//callback
-		if (typeof(thisnode.obj.options.onchange)=='function') {
-			thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
-		}
-		thisnode.obj.root.animateToStatic();
-	}
-	
-	var $input = $('<input type="text"/>').val(old_value);
-	$input.blur(function(event)
+	};
+
+	// serialize (recursive)
+	Node.prototype.serialize = function ()
 	{
-		if($.trim(old_value) != '')
+		var string = '{"node":"' + $("span",this.el).html().replace(/"/g, '\\"') + '","children":[';
+		var count = 0;
+		$.each(this.children, function () {
+			if(!this.el.hasClass('addNode'))
+			{
+				count++;
+				if(count > 1)
+					string += ',';
+				string = string+this.serialize();
+			}
+		});
+		return string+']}';
+	};
+
+	// edit node
+	Node.prototype.edit = function ()
+	{
+		var thisnode = this;
+
+		//don't edit a '+'-node
+		if(this.el.hasClass('addNode'))
+			return true;
+
+		//store current value
+		var old_value = $(':eq(0)', this.el).html();
+
+		//clear label
+		this.el.html('');
+
+		var submit = function (label)
 		{
+			thisnode.el.html($('<span>'+label+'</span>'));
+
+			// execute onchange callback
+			if (typeof(thisnode.obj.options.onchange) === 'function')
+			{
+				thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
+			}
+			thisnode.obj.root.animateToStatic();
+		};
+
+		var cancel = function ()
+		{
+			thisnode.el.html($('<span>'+old_value+'</span>'));
+			thisnode.obj.root.animateToStatic();
+		};
+
+		// create input
+		var $input = $('<input type="text"/>').val(old_value).appendTo(thisnode.el);
+
+		// cancel on blur
+		$input.blur(function (event)
+		{
+			if($.trim(old_value) === '')
+				return true;
+
 			cancel();
-		}
-	});
-	//prevent click->opennode
-	$input.click(function(){return false;});
-	
-	$input.keyup(function(event) {
+		});
+
+		// prevent opennode while editing
+		$input.click(function () {return false;});
+
+		// listen to keys
+		$input.keyup(function (event) {
 			var keycode = event.which;
-			var type = this.tagName.toLowerCase();
-			
-			//cancel
-			if(keycode == 27) // escape
+
+			// escape: cancel
+			if(keycode === 27)
 			{
 				cancel();
 			}
-			
-			//submit
-			else if(keycode == 13) // enter
+
+			// enter: submit
+			else if(keycode === 13)
 			{
-				submit();
+				submit($input.val());
 			}
 			return true;
-	});
-	$input.appendTo(thisnode.el);
-	
-	if(thisnode != this.obj.root)
-	{
-		$('<a style="margin-left:1em;" href="#">[x]</a>').click(function(){
-					if (typeof(thisnode.obj.options.onremove)=='function') {
-						thisnode.obj.options.onremove(thisnode);
-					}
-					thisnode.removeNode();
-					if (typeof(obj.options.onchange)=='function') {
-						thisnode.obj.options.onchange(thisnode, obj.root.serialize());
-					}
-					thisnode.obj.root.animateToStatic();
-		}).appendTo(thisnode.el);
-	}
-	$input.focus().select();
-	return false;
-    }
-
-    // ROOT NODE ONLY:  control animation loop
-    Node.prototype.animateToStatic = function() {
-
-        clearTimeout(this.moveTimer);
-        // stop the movement after a certain time
-        var thisnode = this;
-        this.moveTimer = setTimeout(function() {
-            //stop the movement
-            thisnode.obj.movementStopped = true;
-        }, this.options.timeout*1000);
-
-        if (this.moving) return;
-        this.moving = true;
-        this.obj.movementStopped = false;
-        this.animateLoop();
-    }
-    
-    // ROOT NODE ONLY:  animate all nodes (calls itself recursively)
-    Node.prototype.animateLoop = function() {
-        this.obj.canvas.clear();
-        for (var i = 0; i < this.obj.lines.length; i++) {
-            this.obj.lines[i].updatePosition();
-        }
-        if (this.findEquilibrium() || this.obj.movementStopped) {
-            this.moving=false;
-            return;
-        }
-        var mynode = this;
-        setTimeout(function() {
-            mynode.animateLoop();
-        }, 10);
-    }
-
-    // find the right position for this node
-    Node.prototype.findEquilibrium = function() {
-        var Static = true;
-        Static = this.display() && Static;
-        for (var i=0;i<this.children.length;i++)
-        {
-	  if(this.children[i].visible || this.el.hasClass('active'))
-	  {
-		Static = this.children[i].findEquilibrium() && Static;
-	  }
-        }
-        return Static;
-    }
-
-    //Display this node, and its children
-    Node.prototype.display = function() {
-        if (this.visible) {
-          // if: I'm not active AND my parent's not active AND my children aren't active ...
-	  if(this.parent != null)
-	  {
-	    if(!this.parent.el.hasClass('active'))
-	    {
-		  if (typeof(this.obj.options.onhide)=='function') {
-			this.obj.options.onhide(this);
-		  }
-		  this.el.hide();
-		  this.visible = false;
-              }
-            }
-            if(!this.el.hasClass('active'))
-            {
-		$.each(this.children, function(index,node)
-		{
-			node.el.removeClass('active');
 		});
-            }
-        } else {
-          if (this.el.hasClass('active') || this.parent.el.hasClass('active')) {
-            this.el.show();
-            this.visible = true;
-            if (typeof(this.obj.options.onshow)=='function') {
-		this.obj.options.onshow(this);
-	  }
-          }
-        }
-        this.drawn = true;
-        // am I positioned?  If not, position me.
-        if (!this.hasPosition) {
-            this.x = this.options.mapArea.x/2;
-            this.y = this.options.mapArea.y/2;
-        	this.el.css('left', this.x + "px");
-        	this.el.css('top', this.y + "px");
-            this.hasPosition=true;
-        }
-        // are my children positioned?  if not, lay out my children around me
-        var stepAngle = Math.PI*2/this.children.length;
-        var parent = this;  
-        $.each(this.children, function(index) {
-            if (!this.hasPosition && this.el.css('display') != 'none') {
-                    var angle = index * stepAngle;
-                    this.x = (50 * Math.cos(angle)) + parent.x;
-                    this.y = (50 * Math.sin(angle)) + parent.y;
-                    this.hasPosition=true;           
-                	this.el.css('left', this.x + "px");
-                	this.el.css('top', this.y + "px");
-            }
-        });
-        // update my position
-        return this.updatePosition();
-    }
-
-    // updatePosition returns a boolean stating whether it's been static
-    Node.prototype.updatePosition = function(){
-        if ($(this.el).hasClass("ui-draggable-dragging")) {
-    		this.x = parseInt(this.el.css('left')) + ($(this.el).width() / 2);
-    		this.y = parseInt(this.el.css('top')) + ($(this.el).height() / 2);
-    		this.dx = 0;
-    		this.dy = 0;
-    		return false;
-    	}
-        
-        //apply accelerations
-        var forces = this.getForceVector();
-        this.dx += forces.x * this.options.acceleration;
-        this.dy += forces.y * this.options.acceleration;
-
-        // damp the forces
-        this.dx = this.dx * this.options.damping;
-        this.dy = this.dy * this.options.damping;
-
-        //ADD MINIMUM SPEEDS
-        if (Math.abs(this.dx) < this.options.minSpeed) this.dx = 0;
-        if (Math.abs(this.dy) < this.options.minSpeed) this.dy = 0;
-        if (Math.abs(this.dx)+Math.abs(this.dy)==0) return true;
-        //apply velocity vector
-        this.x += this.dx * this.options.acceleration;
-        this.y += this.dy * this.options.acceleration;
-        this.x = Math.min(this.options.mapArea.x,Math.max(1,this.x));
-        this.y = Math.min(this.options.mapArea.y,Math.max(1,this.y));
-        // display
-    	var showx = this.x - ($(this.el).width() / 2);
-    	var showy = this.y - ($(this.el).height() / 2) - 10;
-    	this.el.css('left', showx + "px");
-    	this.el.css('top', showy + "px");
-    	return false;
-    }
-
-    Node.prototype.getForceVector = function(){
-        var fx = 0;
-        var fy = 0;
-        
-        var nodes = this.obj.nodes;
-        var lines = this.obj.lines;
-        
-        // Calculate the repulsive force from every other node
-        for (var i = 0; i < nodes.length; i++) {
-            if (nodes[i] == this) continue;
-            if (this.options.showSublines && !nodes[i].hasLayout) continue;
-            if (!nodes[i].visible) continue;
-            // Repulsive force (coulomb's law)
-            var x1 = (nodes[i].x - this.x);
-            var y1 = (nodes[i].y - this.y);
-            //adjust for variable node size
-//		var nodewidths = (($(nodes[i]).width() + $(this.el).width())/2);
-            var xsign = x1 / Math.abs(x1);
-            var ysign = y1 / Math.abs(y1);
-            var dist = Math.sqrt((x1 * x1) + (y1 * y1));
-            var theta = Math.atan(y1 / x1);
-            if (x1 == 0) {
-                theta = Math.PI / 2;
-                xsign = 0;
-            }
-            // force is based on radial distance
-            var myrepulse = this.options.repulse;
-//                if (this.parent==nodes[i]) myrepulse=myrepulse*10;  //parents stand further away
-            var f = (myrepulse * 500) / (dist * dist);
-            if (Math.abs(dist) < 500) {
-                fx += -f * Math.cos(theta) * xsign;
-                fy += -f * Math.sin(theta) * xsign;
-            }
-        }
-        // add repulsive force of the "walls"
-        //left wall
-        var xdist = this.x + $(this.el).width();
-        var f = (this.options.wallrepulse * 500) / (xdist * xdist);
-        fx += Math.min(2, f);
-        //right wall
-        var rightdist = (this.options.mapArea.x - xdist);
-        var f = -(this.options.wallrepulse * 500) / (rightdist * rightdist);
-        fx += Math.max(-2, f);
-        //top wall
-        var f = (this.options.wallrepulse * 500) / (this.y * this.y);
-        fy += Math.min(2, f);
-        //bottom wall
-        var bottomdist = (this.options.mapArea.y - this.y);
-        var f = -(this.options.wallrepulse * 500) / (bottomdist * bottomdist);
-        fy += Math.max(-2, f);
-
-        // for each line, of which I'm a part, add an attractive force.
-        for (var i = 0; i < lines.length; i++) {
-            var otherend = null;
-            if (lines[i].start == this) {
-                otherend = lines[i].end;
-            } else if (lines[i].end == this) {
-                otherend = lines[i].start;
-            } else continue;
-            // Ignore the pull of hidden nodes
-            if (!otherend.visible) continue;
-            // Attractive force (hooke's law)
-            var x1 = (otherend.x - this.x);
-            var y1 = (otherend.y - this.y);
-            var dist = Math.sqrt((x1 * x1) + (y1 * y1));
-            var xsign = x1 / Math.abs(x1);
-            var theta = Math.atan(y1 / x1);
-            if (x1==0) {
-                theta = Math.PI / 2;
-                xsign = 0;
-            }
-            // force is based on radial distance
-            var f = (this.options.attract * dist) / 10000;
-            if (Math.abs(dist) > 0) {
-                fx += f * Math.cos(theta) * xsign;
-                fy += f * Math.sin(theta) * xsign;
-            }
-        }
-
-        // if I'm active, attract me to the centre of the area
-        if (this.obj.activeNode === this) {
-            // Attractive force (hooke's law)
-            var otherend = this.options.mapArea;
-            var x1 = ((otherend.x / 2) - this.options.centerOffset - this.x);
-            var y1 = ((otherend.y / 2) - this.y);
-            var dist = Math.sqrt((x1 * x1) + (y1 * y1));
-            var xsign = x1 / Math.abs(x1);
-            var theta = Math.atan(y1 / x1);
-            if (x1 == 0) {
-                theta = Math.PI / 2;
-                xsign = 0;
-            }
-            // force is based on radial distance
-            var f = (0.1 * this.options.attract * dist * this.options.centerAttraction) / 1000;
-            if (Math.abs(dist) > 0) {
-                fx += f * Math.cos(theta) * xsign;
-                fy += f * Math.sin(theta) * xsign;
-            }
-        }
-
-        if (Math.abs(fx) > this.options.maxForce) fx = this.options.maxForce * (fx / Math.abs(fx));
-        if (Math.abs(fy) > this.options.maxForce) fy = this.options.maxForce * (fy / Math.abs(fy));
-        return {
-            x: fx,
-            y: fy
-        };
-    }
-
-    Node.prototype.removeNode = function(){
-        for (var i=0;i<this.children.length;i++) {
-            this.children[i].removeNode();
-        }
-    
-        var oldnodes = this.obj.nodes;
-        this.obj.nodes = new Array();
-        for (var i = 0; i < oldnodes.length; i++) {
-            if (oldnodes[i]===this) continue;
-            this.obj.nodes.push(oldnodes[i]);
-        }
-
-        var oldlines = this.obj.lines;
-        this.obj.lines = new Array();
-        for (var i = 0; i < oldlines.length; i++) {
-            if (oldlines[i].start == this) {
-                continue;
-            } else if (oldlines[i].end == this) {
-                continue;
-            } else this.obj.lines.push(oldlines[i]);
-        }
-
-        $(this.el).remove();
-    }
-
-
-
-    // Define all Line related functions.
-    function Line(obj, startNode, endNode){
-        this.obj = obj;
-        this.options = obj.options;
-        this.start = startNode;
-        this.colour = "blue";
-        this.size = "thick";
-        this.end = endNode;
-    }
-
-    Line.prototype.updatePosition = function(){
-        if (this.options.showSublines && (!this.start.hasLayout || !this.end.hasLayout)) return;
-        if (!this.options.showSublines && (!this.start.visible || !this.end.visible)) return;
-        this.strokeStyle = this.options.lineColor;
-        this.strokeWidth = this.options.lineWidth;
-        this.strokeOpacity = this.options.lineOpacity;
-
-        var c = this.obj.canvas.path("M"+this.start.x+' '+this.start.y+"L"+this.end.x+' '+this.end.y).attr({stroke: this.strokeStyle, opacity:this.strokeOpacity, 'stroke-width':this.strokeWidth});                
-
-    }
-    
-    $.fn.addNode = function (parent, name, options, addNode) {
-        var obj = this[0];
-        var node = obj.nodes[obj.nodes.length] = new Node(obj, name, parent, options);
-        //console.log(obj.root);alert('addNode');
-        
-        //add a "+"-Node for adding new nodes
-        if(node.options.editable == true && !addNode)
-		this.addNewNode(node);
-        
-        obj.root.animateToStatic();
-        return node;
-    }
-    
-    $.fn.addNewNode = function (parent)
-    {
-	var parent = parent;
-	var mindmap = this;
-	node = this.addNode(parent, '+',{
-		onclick:function(event)
+		
+		// build '+' button
+		$('<a style="margin-left:0.5em;" href="#">[+]</a>').click(function ()
 		{
-			newnode = mindmap.addNode(parent, '...', {});
-			newnode.el.trigger('dblclick');
+			thisnode.obj.original.addNode(thisnode,'...').edit();
+			thisnode.obj.root.animateToStatic();
+		}).appendTo(thisnode.el);
+
+		// build delete button
+		if(thisnode !== this.obj.root)
+		{
+			$('<a style="margin-left:0.5em;" href="#">[x]</a>').click(function ()
+			{
+				thisnode.removeNode();
+				thisnode.obj.root.animateToStatic();
+			}).appendTo(thisnode.el);
+		}
+		return false;
+	};
+
+	// ROOT NODE ONLY:  control animation loop
+	Node.prototype.animateToStatic = function ()
+	{
+		var thisnode = this;
+
+		// stop the movement after a certain time
+		clearTimeout(this.moveTimer);
+		this.moveTimer = setTimeout(function () {
+			// stop the movement
+			thisnode.obj.movementStopped = true;
+		}, this.obj.options.timeout*1000);
+
+		// don't do anything if already moving
+		if (this.moving)
+			return;
+
+		// tell everybody that I'm moving the map
+		this.moving = true;
+		this.obj.movementStopped = false;
+
+		// animate
+		this.animateLoop();
+	};
+
+	// ROOT NODE ONLY:  animate all nodes (recursive)
+	Node.prototype.animateLoop = function ()
+	{
+		var thisnode = this;
+
+		// redraw lines
+		this.obj.canvas.clear();
+		for (var i = 0; i < this.obj.lines.length; i++)
+		{
+			this.obj.lines[i].updatePosition();
+		}
+
+		if (this.findEquilibrium() || this.obj.movementStopped)
+		{
+			this.moving=false;
+			return;
+		}
+
+		setTimeout(function () {
+			thisnode.animateLoop();
+		}, 1000 / this.obj.options.frameRate);
+	};
+
+	// find the right position for this node
+	Node.prototype.findEquilibrium = function ()
+	{
+		var Static = true;
+		Static = this.display() && Static;
+		for (var i=0;i<this.children.length;i++)
+		{
+			if(this.children[i].visible || this.el.hasClass('active'))
+			{
+				Static = this.children[i].findEquilibrium() && Static;
+			}
+		}
+		return Static;
+	};
+
+	//Display this node, and its children
+	Node.prototype.display = function ()
+	{
+
+	/* Draw node */
+		if (this.visible)
+		{
+			// if my parent is not active: hide me
+			if(this.parent !== null && !this.parent.el.hasClass('active'))
+			{
+				// execute onhide callback
+				if (typeof(this.obj.options.onhide) === 'function')
+				{
+					this.obj.options.onhide(this);
+				}
+				this.el.hide();
+				this.visible = false;
+			}
+
+			// if I'm not active my children can't be, too
+			if(!this.el.hasClass('active'))
+			{
+				$.each(this.children, function (index,node)
+				{
+					node.el.removeClass('active');
+				});
+			}
+		}else
+		{
+			// if my parent or I are active: show me
+			if (this.el.hasClass('active') || this.parent.el.hasClass('active')) {
+				this.el.show();
+				this.visible = true;
+
+				// execute onshow callback
+				if (typeof(this.obj.options.onshow) === 'function')
+				{
+					this.obj.options.onshow(this);
+				}
+			}
+		}
+		this.drawn = true;
+
+	/* position node */
+		if (!this.hasPosition)
+		{
+			this.x = this.obj.options.mapArea.x/2;
+			this.y = this.obj.options.mapArea.y/2;
+			this.el.css('left', this.x + "px");
+			this.el.css('top', this.y + "px");
+			this.hasPosition=true;
+		}
+
+        /* position children */
+		var stepAngle = Math.PI*2/this.children.length;
+		var parent = this;
+		$.each(this.children, function (index) {
+			if (!this.hasPosition && this.el.css('display') !== 'none')
+			{
+				var angle = index * stepAngle;
+				this.x = (50 * Math.cos(angle)) + parent.x;
+				this.y = (50 * Math.sin(angle)) + parent.y;
+				this.hasPosition=true;
+				this.el.css('left', this.x + "px");
+				this.el.css('top', this.y + "px");
+			}
+		});
+		// update my position
+		return this.updatePosition();
+	};
+
+	// updatePosition returns a boolean stating whether it's been static
+	Node.prototype.updatePosition = function ()
+	{
+		if ($(this.el).hasClass("ui-draggable-dragging"))
+		{
+			this.x = parseInt(this.el.css('left')) + ($(this.el).width() / 2);
+			this.y = parseInt(this.el.css('top')) + ($(this.el).height() / 2);
+			this.dx = 0;
+			this.dy = 0;
 			return false;
 		}
-	}, true);
-	node.el.addClass('addNode');
-	return node;
-    }
 
-    $.fn.addRootNode = function (content, opts) {
-        var node = this[0].nodes[0] = new Node(this[0], content, null, opts);
-        this[0].root = node;
-        
-        //add a "+"-Node for adding new nodes
-        if(node.options.editable == true)
-		this.addNewNode(node);
-        
-        return node;
-    }
-    
-    $.fn.buzzmap = function(options) {
+		//apply accelerations
+		var forces = this.getForceVector();
+		this.dx += forces.x * this.obj.options.acceleration;
+		this.dy += forces.y * this.obj.options.acceleration;
+
+		// damp the forces
+		this.dx = this.dx * this.obj.options.damping;
+		this.dy = this.dy * this.obj.options.damping;
+
+		//ADD MINIMUM SPEEDS
+		if (Math.abs(this.dx) < this.obj.options.minSpeed) this.dx = 0;
+		if (Math.abs(this.dy) < this.obj.options.minSpeed) this.dy = 0;
+		if (Math.abs(this.dx)+Math.abs(this.dy)==0) return true;
+		
+		//apply velocity vector
+		this.x += this.dx * this.obj.options.acceleration;
+		this.y += this.dy * this.obj.options.acceleration;
+		this.x = Math.min(this.obj.options.mapArea.x,Math.max(1,this.x));
+		this.y = Math.min(this.obj.options.mapArea.y,Math.max(1,this.y));
+		
+		// display
+		var showx = this.x - ($(this.el).width() / 2);
+		var showy = this.y - ($(this.el).height() / 2) - 10;
+		this.el.css('left', showx + "px");
+		this.el.css('top', showy + "px");
+		return false;
+	};
+
+	Node.prototype.getForceVector = function ()
+	{
+		var fx = 0;
+		var fy = 0;
+
+		var nodes = this.obj.nodes;
+		var lines = this.obj.lines;
+
+		// Calculate the repulsive force from every other node
+		for (var i = 0; i < nodes.length; i++)
+		{
+			if (nodes[i] === this)
+				continue;
+			if (this.obj.options.showSublines && !nodes[i].hasLayout)
+				continue;
+			if (!nodes[i].visible)
+				continue;
+			
+			// Repulsive force (coulomb's law)
+			var x1 = (nodes[i].x - this.x);
+			var y1 = (nodes[i].y - this.y);
+			
+			//adjust for variable node size
+			var xsign = x1 / Math.abs(x1);
+			var ysign = y1 / Math.abs(y1);
+			var dist = Math.sqrt((x1 * x1) + (y1 * y1));
+			var theta = Math.atan(y1 / x1);
+			if (x1 === 0)
+			{
+				theta = Math.PI / 2;
+				xsign = 0;
+			}
+			
+			// force is based on radial distance
+			var myrepulse = this.obj.options.repulse;
+			var f = (myrepulse * 500) / (dist * dist);
+			if (Math.abs(dist) < 500)
+			{
+				fx += -f * Math.cos(theta) * xsign;
+				fy += -f * Math.sin(theta) * xsign;
+			}
+		}
+		
+		// add repulsive force of the "walls"
+		//left wall
+		var xdist = this.x + $(this.el).width();
+		var f = (this.obj.options.wallrepulse * 500) / (xdist * xdist);
+		fx += Math.min(2, f);
+		//right wall
+		var rightdist = (this.obj.options.mapArea.x - xdist);
+		var f = -(this.obj.options.wallrepulse * 500) / (rightdist * rightdist);
+		fx += Math.max(-2, f);
+		//top wall
+		var f = (this.obj.options.wallrepulse * 500) / (this.y * this.y);
+		fy += Math.min(2, f);
+		//bottom wall
+		var bottomdist = (this.obj.options.mapArea.y - this.y);
+		var f = -(this.obj.options.wallrepulse * 500) / (bottomdist * bottomdist);
+		fy += Math.max(-2, f);
+
+		// for each line, of which I'm a part, add an attractive force.
+		for (var i = 0; i < lines.length; i++)
+		{
+			var otherend = null;
+			if (lines[i].start === this)
+			{
+				otherend = lines[i].end;
+			} else if (lines[i].end === this)
+			{
+				otherend = lines[i].start;
+			} else
+				continue;
+			
+			// Ignore the pull of hidden nodes
+			if (!otherend.visible)
+				continue;
+			
+			// Attractive force (hooke's law)
+			var x1 = (otherend.x - this.x);
+			var y1 = (otherend.y - this.y);
+			var dist = Math.sqrt((x1 * x1) + (y1 * y1));
+			var xsign = x1 / Math.abs(x1);
+			var theta = Math.atan(y1 / x1);
+			if (x1==0)
+			{
+				theta = Math.PI / 2;
+				xsign = 0;
+			}
+			// force is based on radial distance
+			var f = (this.obj.options.attract * dist) / 10000;
+			if (Math.abs(dist) > 0)
+			{
+				fx += f * Math.cos(theta) * xsign;
+				fy += f * Math.sin(theta) * xsign;
+			}
+		}
+
+		// if I'm root, attract me to the centre of the area
+		if (!this.parent)
+		{
+			// Attractive force (hooke's law)
+			var otherend = this.obj.options.mapArea;
+			var x1 = ((otherend.x / 2) - this.obj.options.centerOffset - this.x);
+			var y1 = ((otherend.y / 2) - this.y);
+			var dist = Math.sqrt((x1 * x1) + (y1 * y1));
+			var xsign = x1 / Math.abs(x1);
+			var theta = Math.atan(y1 / x1);
+			if (x1 === 0)
+			{
+				theta = Math.PI / 2;
+				xsign = 0;
+			}
+			// force is based on radial distance
+			var f = (0.1 * this.obj.options.attract * dist * this.obj.options.centerAttraction) / 1000;
+			if (Math.abs(dist) > 0)
+			{
+				fx += f * Math.cos(theta) * xsign;
+				fy += f * Math.sin(theta) * xsign;
+			}
+		}
+
+		if (Math.abs(fx) > this.obj.options.maxForce) fx = this.obj.options.maxForce * (fx / Math.abs(fx));
+		if (Math.abs(fy) > this.obj.options.maxForce) fy = this.obj.options.maxForce * (fy / Math.abs(fy));
+		return {
+			x: fx,
+			y: fy
+		};
+	};
+
+	Node.prototype.removeNode = function ()
+	{
+		// execute onremove callback
+		if (typeof(this.obj.options.onremove) === 'function')
+		{
+			this.obj.options.onremove(this);
+		}
+
+		// remove all children
+		for (var i=0;i<this.children.length;i++)
+		{
+			this.children[i].removeNode();
+		}
+
+		// delete me from the node stack
+		var oldnodes = this.obj.nodes;
+		this.obj.nodes = new Array();
+		for(var i = 0; i < oldnodes.length; i++)
+		{
+			if(oldnodes[i]===this)
+				continue;
+			this.obj.nodes.push(oldnodes[i]);
+		}
+
+		// delete all associated lines
+		var oldlines = this.obj.lines;
+		this.obj.lines = new Array();
+		for (var i = 0; i < oldlines.length; i++)
+		{
+			if(oldlines[i].start === this)
+			{
+				continue;
+			}else if (oldlines[i].end === this)
+			{
+				continue;
+			}else
+			{
+				this.obj.lines.push(oldlines[i]);
+			}
+		}
+
+		// remove html
+		$(this.el).remove();
+
+		// execute onchange callback
+		if (typeof(this.obj.options.onchange) === 'function')
+		{
+			this.obj.options.onchange(this, this.obj.root.serialize());
+		}
+	};
+
+/* Line */
+	function Line(obj, startNode, endNode)
+	{
+		this.obj = obj;
+		this.start = startNode;
+		this.end = endNode;
+	};
+
+	Line.prototype.updatePosition = function ()
+	{
+		if (!this.obj.options.showSublines && (!this.start.visible || !this.end.visible))
+			return;
+		if (this.obj.options.showSublines && (!this.start.hasLayout || !this.end.hasLayout))
+			return;
+		this.strokeStyle = this.obj.options.lineColor;
+		this.strokeWidth = this.obj.options.lineWidth;
+		this.strokeOpacity = this.obj.options.lineOpacity;
+
+		var c = this.obj.canvas.path("M"+this.start.x+' '+this.start.y+"L"+this.end.x+' '+this.end.y)
+		                        .attr({stroke: this.strokeStyle, opacity:this.strokeOpacity, 'stroke-width':this.strokeWidth});
+	};
+
+	$.fn.addNode = function (parent, name)
+	{
+		var obj = this[0];
+		var node = obj.nodes[obj.nodes.length] = new Node(obj, name, parent);
+
+		obj.root.animateToStatic();
+		return node;
+	};
+
+	$.fn.addRootNode = function (content)
+	{
+		var node = this[0].nodes[0] = new Node(this[0], content, null);
+		this[0].root = node;
+		this[0].original = this;
+
+		return node;
+	};
+
+    $.fn.buzzmap = function (options) {
 	  var $mindmap = $('ul:eq(0)',this);
 	  if(!$mindmap.hasClass('buzzmap-active'))
 	  {
-	  
+
 	  // Define default settings.
             var options = $.extend({
 		  mapArea: {
 		      x:-1,
 		      y:-1
 		  },
-		  loadData:null,
+		  loadData: null,
 		  editable: false,
-		  
-		  onchange: function(node, data){},
-		  ondrag: function(root){},
-		  onshow: function(node){},
-		  onhide: function(node){},
-		  onremove: function(node){},
-		  
-		  attract: 11,
-		  repulse: 6,
+
+		  onchange: function (node, data) {},
+		  ondrag: function (root) {},
+		  onshow: function (node) {},
+		  onhide: function (node) {},
+		  onremove: function (node) {},
+
+		  attract: 12,
+		  repulse: 10,
 		  maxForce: 0.15,
-		  damping: 0.7,
-		  acceleration: 8,
-		  
+		  damping: 0.9,
+		  acceleration: 3.5,
+
 		  lineWidth: '5px',
 		  lineColor: '#FFF',
 		  lineOpacity: 0.3,
-		  
-		  wallrepulse: 0.4,
+
+		  wallrepulse: 0.5,
 		  centerOffset:100,
 		  centerAttraction:0,
 		  minSpeed: 0.05,
-		  timeout: 4
+		  frameRate:50,
+		  timeout: 5
             },options);
-            
-	  return $mindmap.each(function() {
+
+	  return $mindmap.each(function () {
 		  var mindmap = this;
 		  this.mindmapInit = true;
 		  this.nodes = new Array();
 		  this.lines = new Array();
 		  this.activeNode = null;
 		  this.options = options;
-		  this.animateToStatic = function() {
-		      this.activeNode.animateToStatic();
+		  this.animateToStatic = function () {
+		      this.root.animateToStatic();
 		  }
-		  $(window).resize(function(){
+		  $(window).resize(function () {
 		      mindmap.animateToStatic();
 		  });
-	        
+
 		  //canvas
 		  if (options.mapArea.x==-1) {
 		      options.mapArea.x = $(window).width();
@@ -616,39 +678,41 @@
 		      options.mapArea.y = $(window).height();
 		  }
 		  //create drawing area
+		  //if($('.buzzmap-active'))
 		  this.canvas = Raphael(0, 0, options.mapArea.x, options.mapArea.y);
-		  
+
 		  // Add a class to the object, so that styles can be applied
 		  $(this).addClass('buzzmap-active');
-		  
+
 		  // add the data to the mindmap
 		  if(options.loadData)
 		  {
 			var map = $.parseJSON(options.loadData);
-			var nodeCreate = function(parent, children)
+			var nodeCreate = function (parent, children)
 			{
-				$.each(children, function(index,object)
+				$.each(children, function (index,object)
 				{
-					node = $mindmap.addNode(parent, decodeURI(object.node), {})
+					node = $mindmap.addNode(parent, '<span>'+decodeURI(object.node)+'</span>')
 					nodeCreate(node, object.children);
 				});
 			};
-			
-			
+
+
 			var root = $mindmap.addRootNode(decodeURI(map.node), {});
-			$.each(map.children, function(index,object)
+			$.each(map.children, function (index,object)
 			{
-				node = $mindmap.addNode(root, decodeURI(object.node), {})
+				node = $mindmap.addNode(root, '<span>'+decodeURI(object.node)+'</span>')
 				nodeCreate(node, object.children);
 			});
 		  }else{
-			  var root = $('>li',this).get(0).mynode = $mindmap.addRootNode($('>li>div',this).html(), {});
-
-			  $('>li',this).hide();
-			  var addLI = function()
+			  $el = $('>li',this);
+			  var root = $el.get(0).mynode = $mindmap.addRootNode($('>li>div',this).html());
+			  
+			  $el.hide();
+			  var addLI = function ()
 			  {
 			      var parentnode = $(this).parents('li').get(0);
-			      if (typeof(parentnode)=='undefined')
+			      if (typeof(parentnode) === 'undefined')
 			      {
 				parentnode=root;
 			      }
@@ -659,8 +723,7 @@
 			      $(this).hide();
 			      $('>ul>li', this).each(addLI);
 			  };
-			  $('>li>ul', $mindmap).each(function() {
-			      
+			  $('>li>ul', $mindmap).each(function () {
 			      $('>li', this).each(addLI);
 			  });
 		  }
@@ -668,4 +731,3 @@
 	}
     };
 })(jQuery);
-

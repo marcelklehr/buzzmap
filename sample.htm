@@ -21,16 +21,19 @@
   <!-- Kick everything off -->
   <script type="text/javascript">
   <!--
-  if(document.cookie)
-  {
-	var cookie = document.cookie.replace('buzzmap=', '');
-  }else{var cookie = null;}
   
-  $(document).ready(function (){
+  $(document).ready(function ()
+  {
+	var cache;
+	//if(localStorage.getItem('buzzmap'))
+	
+		alert('getting cache');
+		cache = localStorage.getItem('buzzmap');
+	//}
 	var $mindmap = $('body').buzzmap({
 		editable: true,
-		onchange: function(node,data){document.cookie = 'buzzmap='+data;},
-		loadData: cookie,
+		onchange: function(node,data){ localStorage.setItem('buzzmap', data); alert(localStorage.getItem('buzzmap'));},
+		loadData: cache,
 	});	
   });
   -->
