@@ -24,12 +24,7 @@
   
   $(document).ready(function ()
   {
-	var cache;
-	//if(localStorage.getItem('buzzmap'))
-	
-		alert('getting cache');
-		cache = localStorage.getItem('buzzmap');
-	//}
+	var cache = localStorage.getItem('buzzmap');
 	var $mindmap = $('body').buzzmap({
 		editable: true,
 		onchange: function(node,data){ localStorage.setItem('buzzmap', data); alert(localStorage.getItem('buzzmap'));},

@@ -74,7 +74,7 @@
 		var thisnode = this;
 		var opennode = function (event)
 		{
-			//show children
+			// toggle active
 			if(thisnode.children.length > 0)
 			{
 				thisnode.el.toggleClass('active');
@@ -114,19 +114,19 @@
 			if(thisnode.obj.options.editable === true)
 			{
 				//little puffer time for enabling dblclick
-				setTimeout(opennode,150);
+				setTimeout(opennode,500);
 			}else
 			{
 				opennode();
 			}
+			return true;
 		});
-		
 	};
 
 	// serialize (recursive)
 	Node.prototype.serialize = function ()
 	{
-		var string = '{"node":"' + $("span",this.el).html().replace(/"/g, '\\"') + '","children":[';
+		var string = '{"node":"' + $(this.el).html().replace(/"/g, '\\"') + '","children":[';
 		var count = 0;
 		$.each(this.children, function () {
 			if(!this.el.hasClass('addNode'))
@@ -174,7 +174,7 @@
 		};
 
 		// create input
-		var $input = $('<input type="text"/>').val(old_value).appendTo(thisnode.el);
+		var $input = $('<input type="text"/>').val(old_value);
 
 		// cancel on blur
 		$input.blur(function (event)
@@ -206,11 +206,15 @@
 			return true;
 		});
 		
+		$input.appendTo(thisnode.el).focus().select();
+		
 		// build '+' button
 		$('<a style="margin-left:0.5em;" href="#">[+]</a>').click(function ()
 		{
 			thisnode.obj.original.addNode(thisnode,'...').edit();
 			thisnode.obj.root.animateToStatic();
+			cancel();
+			return false;
 		}).appendTo(thisnode.el);
 
 		// build delete button
@@ -218,8 +222,10 @@
 		{
 			$('<a style="margin-left:0.5em;" href="#">[x]</a>').click(function ()
 			{
+				cancel();
 				thisnode.removeNode();
 				thisnode.obj.root.animateToStatic();
+				return false;
 			}).appendTo(thisnode.el);
 		}
 		return false;
@@ -556,10 +562,7 @@
 		this.obj.lines = new Array();
 		for (var i = 0; i < oldlines.length; i++)
 		{
-			if(oldlines[i].start === this)
-			{
-				continue;
-			}else if (oldlines[i].end === this)
+			if(oldlines[i].start === this || oldlines[i].end === this)
 			{
 				continue;
 			}else
@@ -692,7 +695,7 @@
 			{
 				$.each(children, function (index,object)
 				{
-					node = $mindmap.addNode(parent, '<span>'+decodeURI(object.node)+'</span>')
+					node = $mindmap.addNode(parent, decodeURI(object.node))
 					nodeCreate(node, object.children);
 				});
 			};
@@ -701,7 +704,7 @@
 			var root = $mindmap.addRootNode(decodeURI(map.node), {});
 			$.each(map.children, function (index,object)
 			{
-				node = $mindmap.addNode(root, '<span>'+decodeURI(object.node)+'</span>')
+				node = $mindmap.addNode(root, decodeURI(object.node))
 				nodeCreate(node, object.children);
 			});
 		  }else{
