@@ -39,6 +39,7 @@
 
 		// animation handling
 		this.moving = false;
+		this.editing = false;
 		this.moveTimer = 0;
 		this.obj.movementStopped = false;
 		this.visible = true;
@@ -104,6 +105,7 @@
 		{
 			this.el.dblclick(function (event)
 			{
+				thisnode.editing = true;
 				thisnode.edit();
 			});
 		}
@@ -114,7 +116,11 @@
 			if(thisnode.obj.options.editable === true)
 			{
 				//little puffer time for enabling dblclick
-				setTimeout(opennode,500);
+				setTimeout(function() {
+					if(thisnode.editing === true)
+						return false;
+					opennode();
+				},500);
 			}else
 			{
 				opennode();
@@ -164,12 +170,14 @@
 			{
 				thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
 			}
+			thisnode.editing = false;
 			thisnode.obj.root.animateToStatic();
 		};
 
 		var cancel = function ()
 		{
 			thisnode.el.html($('<span>'+old_value+'</span>'));
+			thisnode.editing = false;
 			thisnode.obj.root.animateToStatic();
 		};
 
