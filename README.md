@@ -1,8 +1,11 @@
 # buzzmap #
+
 javascript mindmapping tool (jquery plugin)
+
 Copyright (c) 2001 Marcel Klehr
 
 based on js-mindmap
+
 Copyright (c) 2008/09/10 Kenneth Kufluk
 
 ## Features ##
