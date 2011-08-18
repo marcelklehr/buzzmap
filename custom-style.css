@@ -27,8 +27,3 @@ body {
 .buzzmap-active div.node.active a {
 	color:#fff;
 }
-.buzzmap-active .addNode {
-	border:5px solid red !important;
-	color:#fff!important;
-	background-color:Orange!important;
-}

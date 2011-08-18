@@ -689,7 +689,6 @@
 		      options.mapArea.y = $(window).height();
 		  }
 		  //create drawing area
-		  //if($('.buzzmap-active'))
 		  this.canvas = Raphael(0, 0, options.mapArea.x, options.mapArea.y);
 
 		  // Add a class to the object, so that styles can be applied
