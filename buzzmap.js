@@ -2,8 +2,12 @@
  * buzzmap
  * Copyright (c) 2011 Marcel Klehr
  *
- * based on js-mindmap
+ * based on "js-mindmap"
  * Copyright (c) 2008/09/10 Kenneth Kufluk http://kenneth.kufluk.com/
+ *
+ * This program makes use of "MicroEvent - to make any js object an event emitter (server or browser)"
+ * Copyright (c) 2011 Jerome Etienne, http://jetienne.com
+ * 
  * 
  * MIT (X11) license
  * 
@@ -16,7 +20,7 @@
  * 
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
-
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,78 +30,136 @@
  * THE SOFTWARE.
  */
 (function ($) {
+  var MicroEvent	= function(){}
+  MicroEvent.prototype	= {
+    bind	: function(event, fct){
+      this._events = this._events || {};
+      this._events[event] = this._events[event]	|| [];
+      this._events[event].push(fct);
+    },
+    unbind	: function(event, fct){
+      this._events = this._events || {};
+      if( event in this._events === false  )	return;
+      this._events[event].splice(this._events[event].indexOf(fct), 1);
+    },
+    trigger	: function(event /* , args... */){
+      this._events = this._events || {};
+      if( event in this._events === false  )	return;
+      for(var i = 0; i < this._events[event].length; i++){
+        this._events[event][i].apply(this, Array.prototype.slice.call(arguments, 1))
+      }
+    }
+  };
 
-/* Define Node */
-	var Node = function (obj, info, parent)
+  MicroEvent.mixin	= function(destObject){
+    var props	= ['bind', 'unbind', 'trigger'];
+    for(var i = 0; i < props.length; i ++){
+      destObject.prototype[props[i]]	= MicroEvent.prototype[props[i]];
+    }
+  };
+  
+  function Line(obj, startNode, endNode)
 	{
+		this.obj = obj;
+		this.start = startNode;
+		this.end = endNode;
+	};
 
-	/* Define Properties */
-		this.obj      = obj;
-		this.info     = info;
+	Line.prototype.updatePosition = function ()
+	{
+		if (!this.start.visible || !this.end.visible)
+			return;
+		this.strokeStyle = this.obj.options.lineColor;
+		this.strokeWidth = this.obj.options.lineWidth;
+		this.strokeOpacity = this.obj.options.lineOpacity;
+
+		var c = this.obj.canvas.path("M"+this.start.x+' '+this.start.y+"L"+this.end.x+' '+this.end.y)
+		                       .attr({stroke: this.strokeStyle, opacity: this.strokeOpacity, 'stroke-width': this.strokeWidth});
+	};
+  
+	var Node = function (obj, parent, label)
+	{
+    var thisnode = this;
+    
+	  // Define Properties
+		this.obj      = obj;// root ul
 		this.parent   = parent;
 		this.children = [];
-
-		// animation handling
-		this.moving = false;
-		this.editing = false;
-		this.moveTimer = 0;
-		this.obj.movementStopped = false;
-		this.visible = true;
-		this.hasLayout = true;
-		this.x = 1;
+    this.visible = false;
+    this.moveTimer = 0;
+    
+    // Vectors
+    this.x = 1;
 		this.y = 1;
 		this.dx = 0;
 		this.dy = 0;
-		this.hasPosition = false;
-
-	/* create the html element*/
-		this.el = $('<div>'+this.info+'</div>');
+    
+    // Define States
+    this.editing = false;
+    this.dragging = false;
+    this.hasPosition = false;// node position calculated?
+    
+    // create the node element
+		this.el = $('<div></div>');
 		this.el.css('position','absolute');
 		this.el.addClass('node');
-		$('.buzzmap-active').prepend(this.el);
-
-	/* root node */
-		if(!this.parent)
-		{
-			// make active
-			this.el.addClass('active');
-		}
-	/* child node */
-		else
-		{
-			// draw a line to parent
-			this.obj.lines[this.obj.lines.length] = new Line(obj, this, parent);
-			// say hello to parent
-			this.parent.children.push(this);
-		}
-
-	/* make node interactive */
-		var thisnode = this;
-		var opennode = function (event)
-		{
-			// toggle active
-			if(thisnode.children.length > 0)
+		this.obj.el.prepend(this.el);
+    this.el.hide();
+    
+    // label
+    this.label(label);
+    
+    // root node?
+    if(!this.parent)// mighty root node
+    {
+      this.el.addClass('active');
+    }else
+    {
+      this.parent.children.push(this);
+      
+      if(!this.parent.parent)// visible root
+      {
+        this.el.addClass('active');
+        this.el.addClass('root');
+      }
+      else// child nodes
+      {
+        this.obj.lines[this.obj.lines.length] = new Line(obj, this, parent);
+      }
+    }
+    
+    // click
+		this.el.mouseup(function () {
+      if(thisnode.editing == true || thisnode.dragging == true)
+        return true;
+      
+			if(thisnode.obj.options.editable !== true)
 			{
-				thisnode.el.toggleClass('active');
-				thisnode.obj.root.animateToStatic();
-				return false;
-			}
-
-			return true;
-		};
-
-		// drag
+        thisnode.toggleChildren();
+        return true;
+      }
+      
+      // edit mode: little puffer time for enabling dblclick
+      window.setTimeout(function() {
+        thisnode.toggleChildren();
+      },200);
+      
+      return true;
+		});
+    
+    // drag
 		this.el.draggable({
-			drag:function ()
-			{
-				// execute ondrag callback
-				if (typeof(thisnode.obj.options.ondrag) === 'function')
-				{
-					thisnode.obj.options.ondrag(thisnode.obj.root);
-				}
-				// animate map
-				thisnode.obj.root.animateToStatic();
-			}
+      cancel: ':input,option,button,a',
+      start: function() {
+        thisnode.dragging = true;
+      },
+			drag: function () {
+        thisnode.obj.trigger('ondrag', thisnode);
+				thisnode.obj.animate();
+			},
+      stop: function() {
+        thisnode.dragging = false;
+      }
 		});
 
 		// edit
@@ -105,108 +167,90 @@
 		{
 			this.el.dblclick(function (event)
 			{
+        thisnode.el.addClass('active');
 				thisnode.editing = true;
+				thisnode.obj.editing = true;
 				thisnode.edit();
+        thisnode.obj.animate();
 			});
 		}
-
-		// click
-		this.el.click(function (event)
-		{
-			if(thisnode.obj.options.editable === true)
+	};
+  
+  Node.prototype.toggleChildren = function () {
+			// toggle active
+			if(this.children.length > 0 && this.parent.parent)
 			{
-				//little puffer time for enabling dblclick
-				setTimeout(function() {
-					if(thisnode.editing === true)
-						return false;
-					opennode();
-				},500);
-			}else
-			{
-				opennode();
+				this.el.toggleClass('active');
+				this.obj.animate();
+				return false;
 			}
 			return true;
-		});
-	};
-
-	// serialize (recursive)
+  };
+  
+  Node.prototype.label = function(label) {
+    if(typeof(label) !== 'undefined') {
+      this.el.html($(label));
+    }
+    return $(':eq(0)', this.el).html();
+  };
+  
+  // serialize (recursive)
 	Node.prototype.serialize = function ()
 	{
-		var string = '{"node":"' + $(this.el).html().replace(/"/g, '\\"') + '","children":[';
+		var string = '{"label":"' + $(this.el).html().replace(/"/g, '\\"') + '","children":[';
 		var count = 0;
 		$.each(this.children, function () {
-			if(!this.el.hasClass('addNode'))
-			{
-				count++;
-				if(count > 1)
-					string += ',';
-				string = string+this.serialize();
-			}
+      count++;
+      if(count > 1) string += ',';
+      string = string+this.serialize();
 		});
 		return string+']}';
 	};
-
-	// edit node
+  
+  // edit node
 	Node.prototype.edit = function ()
 	{
 		var thisnode = this;
 
-		//don't edit a '+'-node
-		if(this.el.hasClass('addNode'))
-			return true;
-
 		//store current value
-		var old_value = $(':eq(0)', this.el).html();
+		var old_value = this.label();
 
 		//clear label
-		this.el.html('');
+		this.label('');
 
-		var submit = function (label)
+		var submit = function (text)
 		{
-			thisnode.el.html($('<span>'+label+'</span>'));
+			thisnode.label('<span>'+text+'</span>');
 
 			// execute onchange callback
-			if (typeof(thisnode.obj.options.onchange) === 'function')
-			{
-				thisnode.obj.options.onchange(thisnode, thisnode.obj.root.serialize());
-			}
+		  thisnode.obj.trigger('onchange', thisnode, thisnode.obj.serialize());
+			thisnode.obj.editing = false;
 			thisnode.editing = false;
-			thisnode.obj.root.animateToStatic();
+			thisnode.obj.animate();
 		};
 
 		var cancel = function ()
 		{
-			thisnode.el.html($('<span>'+old_value+'</span>'));
+			thisnode.label('<span>'+old_value+'</span>');
 			thisnode.editing = false;
-			thisnode.obj.root.animateToStatic();
+			thisnode.obj.editing = false;
+			thisnode.obj.animate();
 		};
 
 		// create input
-		var $input = $('<input type="text"/>').val(old_value);
-
-		// cancel on blur
-		$input.blur(function (event)
-		{
-			if($.trim(old_value) === '')
-				return true;
-
-			cancel();
-		});
-
-		// prevent opennode while editing
-		$input.click(function () {return false;});
+		var $input = $('<input class="edit-field" type="text" />').val(old_value);
 
 		// listen to keys
 		$input.keyup(function (event) {
 			var keycode = event.which;
 
-			// escape: cancel
+			// [escape] -> cancel
 			if(keycode === 27)
 			{
 				cancel();
 			}
 
-			// enter: submit
+			// [enter] -> submit
 			else if(keycode === 13)
 			{
 				submit($input.val());
@@ -217,165 +261,154 @@
 		$input.appendTo(thisnode.el).focus().select();
 		
 		// build '+' button
-		$('<a style="margin-left:0.5em;" href="#">[+]</a>').click(function ()
-		{
-			thisnode.obj.original.addNode(thisnode,'...').edit();
-			thisnode.obj.root.animateToStatic();
+		$('<button class="edit-button">+</button>').click(function ()	{
+			thisnode.obj.addNode(thisnode, 'Type something...').edit();
+      console.log('should have added node');
 			cancel();
 			return false;
 		}).appendTo(thisnode.el);
 
-		// build delete button
+		// build 'x' button
 		if(thisnode !== this.obj.root)
 		{
-			$('<a style="margin-left:0.5em;" href="#">[x]</a>').click(function ()
+			$('<button class="edit-button">x</button>').click(function ()
 			{
-				cancel();
+        cancel();
 				thisnode.removeNode();
-				thisnode.obj.root.animateToStatic();
+        thisnode.obj.animate();
 				return false;
 			}).appendTo(thisnode.el);
 		}
 		return false;
 	};
-
-	// ROOT NODE ONLY:  control animation loop
-	Node.prototype.animateToStatic = function ()
+  
+  Node.prototype.removeNode = function ()
 	{
-		var thisnode = this;
+		// execute onremove callback
+	  this.obj.trigger('onremove', this);
 
-		// stop the movement after a certain time
-		clearTimeout(this.moveTimer);
-		this.moveTimer = setTimeout(function () {
-			// stop the movement
-			thisnode.obj.movementStopped = true;
-		}, this.obj.options.timeout*1000);
-
-		// don't do anything if already moving
-		if (this.moving)
-			return;
-
-		// tell everybody that I'm moving the map
-		this.moving = true;
-		this.obj.movementStopped = false;
-
-		// animate
-		this.animateLoop();
-	};
-
-	// ROOT NODE ONLY:  animate all nodes (recursive)
-	Node.prototype.animateLoop = function ()
-	{
-		var thisnode = this;
-
-		// redraw lines
-		this.obj.canvas.clear();
-		for (var i = 0; i < this.obj.lines.length; i++)
-		{
-			this.obj.lines[i].updatePosition();
-		}
-
-		if (this.findEquilibrium() || this.obj.movementStopped)
-		{
-			this.moving=false;
-			return;
-		}
-
-		setTimeout(function () {
-			thisnode.animateLoop();
-		}, 1000 / this.obj.options.frameRate);
-	};
-
-	// find the right position for this node
-	Node.prototype.findEquilibrium = function ()
-	{
-		var Static = true;
-		Static = this.display() && Static;
+		// remove all children
 		for (var i=0;i<this.children.length;i++)
 		{
-			if(this.children[i].visible || this.el.hasClass('active'))
-			{
-				Static = this.children[i].findEquilibrium() && Static;
-			}
+			this.children[i].removeNode();
 		}
-		return Static;
-	};
 
-	//Display this node, and its children
+		// delete me from the node stack
+    this.obj.nodes.splice(this.obj.nodes.indexOf(this), 1);
+
+		// delete all associated lines
+		var oldlines = this.obj.lines;
+		this.obj.lines = [];
+		for (var i = 0; i < oldlines.length; i++)
+		{
+			if(oldlines[i].start === this || oldlines[i].end === this) continue;
+			this.obj.lines.push(oldlines[i]);
+		}
+
+		// remove html
+		$(this.el).remove();
+
+		// execute onchange callback
+	  this.obj.trigger('onchange', this, this.obj.serialize());
+    
+    this.obj.animate();
+	};
+  
+  
+ /* ANIMATION */
+
+	// find the right position for this node  (recursive)
+	Node.prototype.findEquilibrium = function ()
+	{
+		var isStatic = (!this.parent) ? true : this.display();
+    
+		for (var i=0; i < this.children.length; i++)
+		{
+      if(this.children[i].visible || this.el.hasClass('active'))
+				isStatic = this.children[i].findEquilibrium() && isStatic;
+		}
+		return isStatic;
+	};
+  
+  Node.prototype.hide = function() {
+    this.obj.trigger('onhide', this);
+    this.el.removeClass('active');
+    this.el.hide();
+    this.visible = false;
+    this.hasPosition = false;// reset position
+  };
+  
+  Node.prototype.show = function() {
+    this.el.show();
+    this.visible = true;
+    this.obj.trigger('onshow', this);
+  };
+  
+  Node.prototype.setPosition = function(x,y) {
+    this.x = x;
+		this.y = y;
+		this.el.css('left', x + "px");
+		this.el.css('top', y + "px");
+    this.hasPosition=true;
+  };
+  
+  // Display this node, and its children
 	Node.prototype.display = function ()
 	{
+   /* Draw node */
+    if (this.visible)
+    {
+      // if my parent is not active: hide me
+      if(!this.parent.el.hasClass('active')) {
+        this.hide();
+      }
+    }else
+    {
+      // if I'm root or my parent's active: show me
+      if(this.parent.parent === null || this.parent.el.hasClass('active')) {
+        this.show();
+      }
+    }
 
-	/* Draw node */
-		if (this.visible)
+	 /* position node */
+  
+    if(!this.visible)
+      return true;
+  
+		if(!this.hasPosition)
 		{
-			// if my parent is not active: hide me
-			if(this.parent !== null && !this.parent.el.hasClass('active'))
-			{
-				// execute onhide callback
-				if (typeof(this.obj.options.onhide) === 'function')
-				{
-					this.obj.options.onhide(this);
-				}
-				this.el.hide();
-				this.visible = false;
-			}
-
-			// if I'm not active my children can't be, too
-			if(!this.el.hasClass('active'))
-			{
-				$.each(this.children, function (index,node)
-				{
-					node.el.removeClass('active');
-				});
-			}
-		}else
-		{
-			// if my parent or I are active: show me
-			if (this.el.hasClass('active') || this.parent.el.hasClass('active')) {
-				this.el.show();
-				this.visible = true;
-
-				// execute onshow callback
-				if (typeof(this.obj.options.onshow) === 'function')
-				{
-					this.obj.options.onshow(this);
-				}
-			}
-		}
-		this.drawn = true;
-
-	/* position node */
-		if (!this.hasPosition)
-		{
-			this.x = this.obj.options.mapArea.x/2;
-			this.y = this.obj.options.mapArea.y/2;
-			this.el.css('left', this.x + "px");
-			this.el.css('top', this.y + "px");
-			this.hasPosition=true;
+      if(this.parent.parent !== null)
+      {// not root
+        console.log('placing child, where parent is...');
+        var x = parseInt(this.parent.el.css('left'));
+        var y = parseInt(this.parent.el.css('top'));
+      }else
+      {// root
+        var x = this.obj.options.mapArea.x/2;
+        var y = this.obj.options.mapArea.y/2;
+      }
+			this.setPosition(x,y);
 		}
 
-        /* position children */
+  /* position children */
 		var stepAngle = Math.PI*2/this.children.length;
 		var parent = this;
-		$.each(this.children, function (index) {
-			if (!this.hasPosition && this.el.css('display') !== 'none')
-			{
-				var angle = index * stepAngle;
-				this.x = (50 * Math.cos(angle)) + parent.x;
-				this.y = (50 * Math.sin(angle)) + parent.y;
-				this.hasPosition=true;
-				this.el.css('left', this.x + "px");
-				this.el.css('top', this.y + "px");
-			}
+		$.each(this.children, function (i) {
+			if (this.visible)
+        return;
+      var angle = i * stepAngle;
+      var x = (50 * Math.cos(angle)) + parent.x;
+      var y = (50 * Math.sin(angle)) + parent.y;
+      this.setPosition(x,y);
 		});
 		// update my position
 		return this.updatePosition();
 	};
-
-	// updatePosition returns a boolean stating whether it's been static
+  
+  // updatePosition returns a boolean stating whether it's been static
 	Node.prototype.updatePosition = function ()
 	{
-		if ($(this.el).hasClass("ui-draggable-dragging"))
+		if($(this.el).hasClass("ui-draggable-dragging"))
 		{
 			this.x = parseInt(this.el.css('left')) + ($(this.el).width() / 2);
 			this.y = parseInt(this.el.css('top')) + ($(this.el).height() / 2);
@@ -411,8 +444,8 @@
 		this.el.css('top', showy + "px");
 		return false;
 	};
-
-	Node.prototype.getForceVector = function ()
+  
+  Node.prototype.getForceVector = function ()
 	{
 		var fx = 0;
 		var fy = 0;
@@ -425,7 +458,7 @@
 		{
 			if (nodes[i] === this)
 				continue;
-			if (this.obj.options.showSublines && !nodes[i].hasLayout)
+			if (this.obj.options.showSublines && !nodes[i].hasPosition)
 				continue;
 			if (!nodes[i].visible)
 				continue;
@@ -457,7 +490,7 @@
 		
 		// add repulsive force of the "walls"
 		//left wall
-		var xdist = this.x + $(this.el).width();
+		var xdist = this.x + this.el.width();
 		var f = (this.obj.options.wallrepulse * 500) / (xdist * xdist);
 		fx += Math.min(2, f);
 		//right wall
@@ -540,204 +573,188 @@
 			y: fy
 		};
 	};
+  
+  
+/* MAP */
 
-	Node.prototype.removeNode = function ()
+  $.fn.buzzmap = function (options) {
+	  var $mindmap = $('ul:eq(0)', this);
+	  if(!$mindmap.hasClass('buzzmap-active')) {
+      $mindmap.each(function () {
+        var obj = new Buzzmap($(this), options);
+        
+        // Add a class to the object, so that styles can be applied
+        obj.el.addClass('buzzmap-active');
+        obj.el[0].obj = obj;
+        
+        // add the data to the mindmap
+        if(obj.options.loadData)
+        {
+          var map = $.parseJSON(options.loadData);
+          var nodeCreate = function (parent, children)
+          {
+            $.each(children, function (index, n)
+            {
+              node = obj.addNode(parent, decodeURI(n.label))
+              nodeCreate(node, n.children);
+            });
+          };
+
+          //var root = obj.addNode(obj.root, decodeURI(map.node));
+          $.each(map.children, function(index, n) {
+            node = obj.addNode(obj.root, decodeURI(n.label))
+            nodeCreate(node, n.children);
+          });
+        }else{
+          var addLI = function ()
+          {
+              var parentnode = $(this).parents('li').get(0);
+              parentnode = (typeof(parentnode) === 'undefined') ? obj.root : parentnode.mynode;
+              this.mynode = obj.addNode(parentnode, $('div:eq(0)',this).html());
+              $(this).hide();
+              $('>ul>li', this).each(addLI);
+          };
+          $('>li', obj.el).each(addLI);
+        }
+        obj.animate();
+      });
+    }
+    return $mindmap[0].obj;
+  };
+  
+  var Buzzmap = function(el, options) {
+    var obj = this;
+    
+    this.el = el;
+    this.nodes = [];
+    this.lines = [];
+    this.parseOptions(options);
+    this.moving = false;
+    this.editing = false;
+		this.movementStopped = false;
+    this.fps = 0;
+    
+    window.setInterval(function() {
+      var fps = obj.fps;
+      obj.fps = 0;
+      obj.trigger('fps', fps);
+    }, 1000);
+    
+    // root node
+    this.root = this.nodes[0] = new Node(this, null, '<span>__ROOT__</span>');
+    
+    $(window).resize(function () {
+        obj.animate();
+    });
+    
+    //create drawing area (canvas)
+    if (this.options.mapArea.x==-1) this.options.mapArea.x = $(window).width();
+    if (this.options.mapArea.y==-1) this.options.mapArea.y = $(window).height();
+    this.canvas = Raphael(0, 0, this.options.mapArea.x, this.options.mapArea.y);
+  };
+  
+  MicroEvent.mixin(Buzzmap);
+  
+  Buzzmap.prototype.addNode = function (parent, label)
 	{
-		// execute onremove callback
-		if (typeof(this.obj.options.onremove) === 'function')
-		{
-			this.obj.options.onremove(this);
-		}
+		var node = this.nodes[this.nodes.length] = new Node(this, parent, label);
+    this.animate();
 
-		// remove all children
-		for (var i=0;i<this.children.length;i++)
-		{
-			this.children[i].removeNode();
-		}
-
-		// delete me from the node stack
-		var oldnodes = this.obj.nodes;
-		this.obj.nodes = new Array();
-		for(var i = 0; i < oldnodes.length; i++)
-		{
-			if(oldnodes[i]===this)
-				continue;
-			this.obj.nodes.push(oldnodes[i]);
-		}
-
-		// delete all associated lines
-		var oldlines = this.obj.lines;
-		this.obj.lines = new Array();
-		for (var i = 0; i < oldlines.length; i++)
-		{
-			if(oldlines[i].start === this || oldlines[i].end === this)
-			{
-				continue;
-			}else
-			{
-				this.obj.lines.push(oldlines[i]);
-			}
-		}
-
-		// remove html
-		$(this.el).remove();
-
-		// execute onchange callback
-		if (typeof(this.obj.options.onchange) === 'function')
-		{
-			this.obj.options.onchange(this, this.obj.root.serialize());
-		}
-	};
-
-/* Line */
-	function Line(obj, startNode, endNode)
-	{
-		this.obj = obj;
-		this.start = startNode;
-		this.end = endNode;
-	};
-
-	Line.prototype.updatePosition = function ()
-	{
-		if (!this.obj.options.showSublines && (!this.start.visible || !this.end.visible))
-			return;
-		if (this.obj.options.showSublines && (!this.start.hasLayout || !this.end.hasLayout))
-			return;
-		this.strokeStyle = this.obj.options.lineColor;
-		this.strokeWidth = this.obj.options.lineWidth;
-		this.strokeOpacity = this.obj.options.lineOpacity;
-
-		var c = this.obj.canvas.path("M"+this.start.x+' '+this.start.y+"L"+this.end.x+' '+this.end.y)
-		                        .attr({stroke: this.strokeStyle, opacity:this.strokeOpacity, 'stroke-width':this.strokeWidth});
-	};
-
-	$.fn.addNode = function (parent, name)
-	{
-		var obj = this[0];
-		var node = obj.nodes[obj.nodes.length] = new Node(obj, name, parent);
-
-		obj.root.animateToStatic();
 		return node;
 	};
-
-	$.fn.addRootNode = function (content)
+  
+  Buzzmap.prototype.serialize = function() {
+    return this.root.serialize();
+  };
+  
+  // control animation loop
+	Buzzmap.prototype.animate = function ()
 	{
-		var node = this[0].nodes[0] = new Node(this[0], content, null);
-		this[0].root = node;
-		this[0].original = this;
+    var obj = this;
+		// Set animation timeout
+    if(obj.options.timeout != 0) {
+      var timeout = (obj.editing == true) ? 1.5 : obj.options.timeout;
+      clearTimeout(obj.moveTimer);
+      obj.moveTimer = setTimeout(function () {
+          obj.movementStopped = true;
+      }, timeout*1000);
+    }
 
-		return node;
+		// don't do anything if already moving
+		if (obj.moving)
+			return;
+
+		// tell everybody that I'm moving the map
+		obj.moving = true;
+		obj.movementStopped = false;
+
+		// start animation loop
+		obj.animateLoop();
 	};
+  
+  // animate all nodes
+	Buzzmap.prototype.animateLoop = function ()
+	{
+		var obj = this;
+    
+		// redraw lines
+		this.canvas.clear();
+		for (var i = 0; i < this.lines.length; i++)
+		{
+			this.lines[i].updatePosition();
+		}
+    
+		if(this.root.findEquilibrium() || this.movementStopped)
+		{
+			this.moving=false;
+			return;
+		}
+    
+    // Wait for next frame
+    window.setTimeout(function() {
+      obj.fps++;
+	    obj.animateLoop();
+		}, 1000 / obj.options.maxFps);
+	};
+  
+  Buzzmap.prototype.parseOptions = function(opts) {
+    // Define default settings.
+    this.options = $.extend({
+      mapArea: {
+          x:-1,
+          y:-1
+      },
+      loadData: null,
+      editable: false,
 
-    $.fn.buzzmap = function (options) {
-	  var $mindmap = $('ul:eq(0)',this);
-	  if(!$mindmap.hasClass('buzzmap-active'))
-	  {
+      onchange: function (node, data) {},
+      ondrag: function (root) {},
+      onshow: function (node) {},
+      onhide: function (node) {},
+      onremove: function (node) {},
 
-	  // Define default settings.
-            var options = $.extend({
-		  mapArea: {
-		      x:-1,
-		      y:-1
-		  },
-		  loadData: null,
-		  editable: false,
+      attract: 3,
+      repulse: 2.5,
+      maxForce: 0.15,
+      damping: 0.9,
+      acceleration: 4,
 
-		  onchange: function (node, data) {},
-		  ondrag: function (root) {},
-		  onshow: function (node) {},
-		  onhide: function (node) {},
-		  onremove: function (node) {},
+      lineWidth: '5px',
+      lineColor: '#FFF',
+      lineOpacity: 0.3,
 
-		  attract: 12,
-		  repulse: 10,
-		  maxForce: 0.15,
-		  damping: 0.9,
-		  acceleration: 3.5,
-
-		  lineWidth: '5px',
-		  lineColor: '#FFF',
-		  lineOpacity: 0.3,
-
-		  wallrepulse: 0.5,
-		  centerOffset:100,
-		  centerAttraction:0,
-		  minSpeed: 0.05,
-		  frameRate:50,
-		  timeout: 5
-            },options);
-
-	  return $mindmap.each(function () {
-		  var mindmap = this;
-		  this.mindmapInit = true;
-		  this.nodes = new Array();
-		  this.lines = new Array();
-		  this.activeNode = null;
-		  this.options = options;
-		  this.animateToStatic = function () {
-		      this.root.animateToStatic();
-		  }
-		  $(window).resize(function () {
-		      mindmap.animateToStatic();
-		  });
-
-		  //canvas
-		  if (options.mapArea.x==-1) {
-		      options.mapArea.x = $(window).width();
-		  }
-		  if (options.mapArea.y==-1) {
-		      options.mapArea.y = $(window).height();
-		  }
-		  //create drawing area
-		  this.canvas = Raphael(0, 0, options.mapArea.x, options.mapArea.y);
-
-		  // Add a class to the object, so that styles can be applied
-		  $(this).addClass('buzzmap-active');
-
-		  // add the data to the mindmap
-		  if(options.loadData)
-		  {
-			var map = $.parseJSON(options.loadData);
-			var nodeCreate = function (parent, children)
-			{
-				$.each(children, function (index,object)
-				{
-					node = $mindmap.addNode(parent, decodeURI(object.node))
-					nodeCreate(node, object.children);
-				});
-			};
-
-
-			var root = $mindmap.addRootNode(decodeURI(map.node), {});
-			$.each(map.children, function (index,object)
-			{
-				node = $mindmap.addNode(root, decodeURI(object.node))
-				nodeCreate(node, object.children);
-			});
-		  }else{
-			  $el = $('>li',this);
-			  var root = $el.get(0).mynode = $mindmap.addRootNode($('>li>div',this).html());
-			  
-			  $el.hide();
-			  var addLI = function ()
-			  {
-			      var parentnode = $(this).parents('li').get(0);
-			      if (typeof(parentnode) === 'undefined')
-			      {
-				parentnode=root;
-			      }
-			      else {
-				parentnode=parentnode.mynode;
-			      }
-			      this.mynode = $mindmap.addNode(parentnode, $('div:eq(0)',this).html(), {});
-			      $(this).hide();
-			      $('>ul>li', this).each(addLI);
-			  };
-			  $('>li>ul', $mindmap).each(function () {
-			      $('>li', this).each(addLI);
-			  });
-		  }
-	  });
-	}
-    };
+      wallrepulse: 0.5,
+      centerOffset:100,
+      centerAttraction:0,
+      minSpeed: 0.05,
+      frameRate:50,
+      timeout: 5
+    }, opts);
+    this.bind('onchange', this.options.onchange);
+    this.bind('ondrag', this.options.ondrag);
+    this.bind('onshow', this.options.onshow);
+    this.bind('onhide', this.options.onhide);
+    this.bind('onremove', this.options.onremove);
+  };
+  
 })(jQuery);

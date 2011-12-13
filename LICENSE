@@ -1,9 +1,11 @@
-buzzmap
-javascript mindmapping tool
+buzzmap - javascript mindmapping tool
 Copyright (c) 2001 Marcel Klehr
 
-baseed on js-mindmap
+based on "js-mindmap"
 Copyright (c) 2008/09/10 Kenneth Kufluk
+
+This program makes use of "MicroEvent"
+Copyright (c) 2011 Jerome Etienne, http://jetienne.com
 
 
 MIT LICENSE

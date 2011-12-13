@@ -5,15 +5,15 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link href="buzzmap.css" rel="stylesheet" type="text/css"/>
   <link href="custom-style.css" type="text/css" rel="stylesheet"/>
-
-  <!-- jQuery -->
-  <script src="jquery.min.js" type="text/javascript"></script>
   
-  <!-- UI, for draggable nodes -->
-  <script src="jquery-ui.min.js" type="text/javascript"></script>
-
   <!-- Raphael for SVG support (won't work on android) -->
   <script src="raphael.min.js" type="text/javascript"></script>
+
+  <!-- jQuery -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js" type="text/javascript"></script>
+  
+  <!-- UI, for draggable nodes -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js" type="text/javascript"></script>
 
   <!-- buzzmap -->
   <script src="buzzmap.js" type="text/javascript"></script>
@@ -21,21 +21,32 @@
   <!-- Kick everything off -->
   <script type="text/javascript">
   <!--
-  
+  var buzzmap;
   $(document).ready(function ()
   {
-	var cache = localStorage.getItem('buzzmap');
-	var $mindmap = $('body').buzzmap({
-		editable: true,
-		onchange: function(node,data){ localStorage.setItem('buzzmap', data); alert(localStorage.getItem('buzzmap'));},
-		loadData: cache,
-	});	
+    // Retrieving previous session
+    if(localStorage)
+	    var cache = localStorage.getItem('buzzmap');
+    
+    // init buzzmap
+    buzzmap = $('body').buzzmap({
+      editable: true, // doubleclick to edit a node
+      onchange: function(node, data){ if(localStorage) localStorage.setItem('buzzmap', data);}, // if map is changed, save to storage
+      loadData: cache, //load last session, if there was one
+      frameRate: 200
+    });
+    
+    // register callback for frame rate
+    buzzmap.bind('fps', function(fps) {
+        $('#fps').text(fps);
+    });
   });
   -->
   </script>
 
 </head>
 <body>
+  <h3>FPS: <span id="fps">0</span></h3>
   <ul>
     <li><div><span>buzzmap</span></div>
 
@@ -50,7 +61,7 @@
           </ul>
 
         </li>
-        <li><div><span>Functions</span></div>
+        <li><div><span>Features</span></div>
 
           <ul>
           	<li><div><span>Mindmapping</span></div></li> 
@@ -63,23 +74,21 @@
         <li><div><span>Files</span></div>
           <ul>
       	  <li><div><span><a href="sample.htm" target="_blank">sample.htm</a></span></div></li> 
-            <li><div><span><a href="js-mindmap.js" target="_blank">buzzmap.js</a></span></div></li> 
-            <li><div><span><a href="js-mindmap.css" target="_blank">buzzmap.css</a></span></div></li>
+            <li><div><span><a href="buzzmap.js" target="_blank">buzzmap.minjs</a></span></div></li> 
+            <li><div><span><a href="buzzmap.css" target="_blank">buzzmap.css</a></span></div></li>
             <li><div><span><a href="raphael.min.js" target="_blank">raphael.min.js</a></span></div></li>
-            <li><div><span><a href="jquery.min.js" target="_blank">jquery.min.js</a></span></div></li>
-            <li><div><span><a href="jquery-ui.min.js" target="_blank">jquery-ui.min.js</a></span></div></li>
           </ul>
         </li>
 
         <li><div><span>Licence</span></div>
           <ul>
             <li><div><span>MIT Licence</span></div></li> 
-            <li><div><span><a href="LICENCE.txt" target="_blank">Conditions</a></span></div></li>
+            <li><div><span><a href="LICENSE" target="_blank">Conditions</a></span></div></li>
           </ul>
          
         <li><div><span>Secret</span></div>
           <ul>
-            <li><div><span>It's free...</span></div></li> 
+            <li><div><span>It's free...</span></div></li>
           </ul>
 
         </li>
