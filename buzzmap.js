@@ -578,7 +578,7 @@
 /* MAP */
 
   $.fn.buzzmap = function (options) {
-	  var $mindmap = $('ul:eq(0)', this);
+	  var $mindmap = $(this).filter('ul');
 	  if(!$mindmap.hasClass('buzzmap-active')) {
       $mindmap.each(function () {
         var obj = new Buzzmap($(this), options);

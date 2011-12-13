@@ -29,7 +29,7 @@
 	    var cache = localStorage.getItem('buzzmap');
     
     // init buzzmap
-    buzzmap = $('body').buzzmap({
+    buzzmap = $('body>ul').buzzmap({
       editable: true, // doubleclick to edit a node
       onchange: function(node, data){ if(localStorage) localStorage.setItem('buzzmap', data);}, // if map is changed, save to storage
       loadData: cache, //load last session, if there was one
