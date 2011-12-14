@@ -29,7 +29,7 @@
 	    var cache = localStorage.getItem('buzzmap');
     
     // init buzzmap
-    buzzmap = $('body>ul:first').buzzmap({
+    buzzmap = $('body>ul:eq(1)').buzzmap({
       editable: true, // doubleclick to edit a node
       onchange: function(node, data){ if(localStorage) localStorage.setItem('buzzmap', data);}, // if map is changed, save to storage
       loadData: cache, //load last session, if there was one
@@ -80,7 +80,7 @@
 <body>
   <h3 style="display:none;">FPS: <span id="fps">0</span></h3>
   <h1>Buzzmap</h1>
-  <a id="download" href="http://github.com/marcelklehr/buzzmap">Download</a>
+  <a id="download" href="https://github.com/marcelklehr/buzzmap/zipball/master">Download</a>
   <ul class="instr">
      <li>Click on a node to view it's children. Click again to hide them.</li>
     <li>Doubleclick to edit a node.</li>
@@ -100,10 +100,11 @@
           </ul>
 
         </li>
+        <li><div><span><a href="https://github.com/marcelklehr/buzzmap/zipball/master">Download</a></span></div></li>
         <li><div><span>Features</span></div>
 
           <ul>
-          	<li><div><span>Mindmapping</span></div></li> 
+          	<li><div><span>Mindmopping</span></div></li> 
           	<li><div><span>Brainstorming</span></div></li> 
           	<li><div><span>Editing</span></div></li>
           	<li><div><span>Visualisation</span></div></li>
