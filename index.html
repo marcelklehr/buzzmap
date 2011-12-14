@@ -29,7 +29,7 @@
 	    var cache = localStorage.getItem('buzzmap');
     
     // init buzzmap
-    buzzmap = $('body>ul').buzzmap({
+    buzzmap = $('body>ul:first').buzzmap({
       editable: true, // doubleclick to edit a node
       onchange: function(node, data){ if(localStorage) localStorage.setItem('buzzmap', data);}, // if map is changed, save to storage
       loadData: cache, //load last session, if there was one
@@ -40,13 +40,36 @@
     buzzmap.bind('fps', function(fps) {
         $('#fps').text(fps);
     });
+    
+    $('h3').show();
+    $('body>ul:eq(1) li').hide();
   });
   -->
   </script>
+  
+  <style type="text/css">
+  BODY {
+    color:#fff;
+    font-family: serif;
+  }
+  h3 {
+    float: right;
+    margin-right: 130px;
+  }
+  .instr {
+    padding-left:1em;
+  }
+  </style>
 
 </head>
 <body>
-  <h3>FPS: <span id="fps">0</span></h3>
+  <h3 style="display:none;">FPS: <span id="fps">0</span></h3>
+  <h1>Buzzmap</h1>
+  <ul class="instr">
+     <li>Click on a node to view it's children. Click again to hide them.</li>
+    <li>Doubleclick to edit a node.</li>
+  </ul>
+  <a href="http://github.com/marcelklehr/buzzmap"><img style="position: absolute; top: 0pt; right: 0pt; border: 0pt none;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
   <ul>
     <li><div><span>buzzmap</span></div>
 
@@ -95,6 +118,5 @@
       </ul>
     </li>
   </ul>
-  <p>Have fun!</p>
 </body>
 </html>
