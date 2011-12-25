@@ -140,9 +140,9 @@
       }
       
       // edit mode: little puffer time for enabling dblclick
-      window.setTimeout(function() {
+      // window.setTimeout(function() {
         thisnode.toggleChildren();
-      },200);
+      // },200);
       
       return true;
 		});
@@ -163,15 +163,9 @@
 		});
 
 		// edit
-		if(this.obj.options.editable === true)
-		{
-			this.el.dblclick(function (event)
-			{
-        thisnode.el.addClass('active');
-				thisnode.editing = true;
-				thisnode.obj.editing = true;
+		if(this.obj.options.editable === true) {
+			this.el.dblclick(function (event) {
 				thisnode.edit();
-        thisnode.obj.animate();
         event.preventDefault();
 			});
 		}
@@ -182,7 +176,7 @@
 			if(this.children.length > 0 && this.parent.parent)
 			{
 				this.el.toggleClass('active');
-				this.obj.animate();
+        this.obj.animate();
 				return false;
 			}
 			return true;
@@ -212,11 +206,12 @@
 	Node.prototype.edit = function ()
 	{
 		var thisnode = this;
+    
+    thisnode.editing = true;
+		thisnode.obj.editing = true;
 
-		//store current value
+		// save current value and clear
 		var old_value = this.label();
-
-		//clear label
 		this.label('');
 
 		var submit = function (text)
@@ -225,17 +220,15 @@
 
 			// execute onchange callback
 		  thisnode.obj.trigger('onchange', thisnode, thisnode.obj.serialize());
-			thisnode.obj.editing = false;
-			thisnode.editing = false;
-			thisnode.obj.animate();
+			thisnode.obj.editing = thisnode.editing = false;
+      thisnode.obj.animate();
 		};
 
 		var cancel = function ()
 		{
 			thisnode.label('<span>'+old_value+'</span>');
-			thisnode.editing = false;
-			thisnode.obj.editing = false;
-			thisnode.obj.animate();
+			thisnode.editing = thisnode.obj.editing = false;
+      thisnode.obj.animate();
 		};
 
 		// create input
@@ -263,9 +256,9 @@
 		
 		// build '+' button
 		$('<button class="edit-button">+</button>').click(function ()	{
-			thisnode.obj.addNode(thisnode, 'Type something...').edit();
-      console.log('should have added node');
 			cancel();
+      thisnode.el.addClass('active');
+      thisnode.obj.addNode(thisnode).edit();
 			return false;
 		}).appendTo(thisnode.el);
 
@@ -380,7 +373,6 @@
 		{
       if(this.parent.parent !== null)
       {// not root
-        console.log('placing child, where parent is...');
         var x = parseInt(this.parent.el.css('left'));
         var y = parseInt(this.parent.el.css('top'));
       }else
