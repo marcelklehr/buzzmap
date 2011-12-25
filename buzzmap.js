@@ -172,6 +172,7 @@
 				thisnode.obj.editing = true;
 				thisnode.edit();
         thisnode.obj.animate();
+        event.preventDefault();
 			});
 		}
 	};
