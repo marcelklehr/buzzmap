@@ -27,11 +27,20 @@ See the [wiki](http://github.com/marcelklehr/buzzmap/wiki) for more information 
 Submit any bugs and feature requests to the [bug tracker](http://github.com/marcelklehr/buzzmap/issues)
 
 ## Changelog
+1.8.2:
+
+- Bugfix: Nodes weren't removed from their parents when deleting them
+- Tried to amke edit mode more intuitive (doubleclicking still fires 'click' event)
+
+1.8.1:
+
+- Corrected jQUery selection mechanism (now the buzzmap container must be selected directly)
+- New CSS class for root nodes ('root') 
+
 1.8:
 
 - Now more than one root nodes are possible
-- Fixed a strange behaviour (some nodes weren't moving until being dragged)
-- There's now a CSS class for root nodes ('root')
+- Bugfix: Fixed a strange behaviour (some nodes weren't moving until being dragged)
 - Root nodes' children can no longer be hidden
 - New event system (MicroEvent)
 - New class 'Buzzmap'
