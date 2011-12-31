@@ -380,8 +380,8 @@
         var y = parseInt(this.parent.el.css('top'));
       }else
       {// root
-        var x = this.obj.options.mapArea.x/2;
-        var y = this.obj.options.mapArea.y/2;
+        var x = this.obj.width/2;
+        var y = this.obj.height/2;
       }
 			this.setPosition(x,y);
 		}
@@ -430,8 +430,8 @@
 		//apply velocity vector
 		this.x += this.dx * this.obj.options.acceleration;
 		this.y += this.dy * this.obj.options.acceleration;
-		this.x = Math.min(this.obj.options.mapArea.x,Math.max(1,this.x));
-		this.y = Math.min(this.obj.options.mapArea.y,Math.max(1,this.y));
+		this.x = Math.min(this.obj.width,Math.max(1,this.x));
+		this.y = Math.min(this.obj.height,Math.max(1,this.y));
 		
 		// display
 		var showx = this.x - ($(this.el).width() / 2);
@@ -490,14 +490,14 @@
 		var f = (this.obj.options.wallrepulse * 500) / (xdist * xdist);
 		fx += Math.min(2, f);
 		//right wall
-		var rightdist = (this.obj.options.mapArea.x - xdist);
+		var rightdist = (this.obj.width - xdist);
 		var f = -(this.obj.options.wallrepulse * 500) / (rightdist * rightdist);
 		fx += Math.max(-2, f);
 		//top wall
 		var f = (this.obj.options.wallrepulse * 500) / (this.y * this.y);
 		fy += Math.min(2, f);
 		//bottom wall
-		var bottomdist = (this.obj.options.mapArea.y - this.y);
+		var bottomdist = (this.obj.height - this.y);
 		var f = -(this.obj.options.wallrepulse * 500) / (bottomdist * bottomdist);
 		fy += Math.max(-2, f);
 
@@ -631,25 +631,33 @@
     this.fps = 0;
     
     window.setInterval(function() {
-      var fps = obj.fps;
+      var fps = obj.fps * 2;
       obj.fps = 0;
       obj.trigger('fps', fps);
-    }, 1000);
+    }, 500);
     
     // root node
     this.root = this.nodes[0] = new Node(this, null, '<span>__ROOT__</span>');
     
     $(window).resize(function () {
-        obj.animate();
+      obj.createCanvas(); 
+      obj.animate();
     });
     
-    //create drawing area (canvas)
-    if (this.options.mapArea.x==-1) this.options.mapArea.x = $(window).width();
-    if (this.options.mapArea.y==-1) this.options.mapArea.y = $(window).height();
-    this.canvas = Raphael(0, 0, this.options.mapArea.x, this.options.mapArea.y);
+    obj.createCanvas();
   };
   
   MicroEvent.mixin(Buzzmap);
+  
+  Buzzmap.prototype.createCanvas = function() {
+    this.height = (this.options.mapArea.y == -1) ? $(window).height() : this.options.mapArea.y;
+    this.width = (this.options.mapArea.x == -1) ? $(window).width() : this.options.mapArea.x;
+    if(!this.canvas){
+      this.canvas = Raphael(0, 0, this.width, this.height);
+    }else{
+      this.canvas.setSize(this.width, this.height);
+    }    
+  };
   
   Buzzmap.prototype.addNode = function (parent, label)
 	{
