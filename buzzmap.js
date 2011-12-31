@@ -286,8 +286,11 @@
 		{
 			this.children[i].removeNode();
 		}
+    
+    // remove me from parent
+    if(this.parent) this.parent.children.splice(this.parent.children.indexOf(this), 1);
 
-		// delete me from the node stack
+		// remove me from the node stack
     this.obj.nodes.splice(this.obj.nodes.indexOf(this), 1);
 
 		// delete all associated lines
