@@ -29,7 +29,7 @@
 	    var cache = localStorage.getItem('buzzmap');
     
     // init buzzmap
-    buzzmap = $('body>ul').buzzmap({
+    buzzmap = $('body>ul:eq(1)').buzzmap({
       editable: true, // doubleclick to edit a node
       onchange: function(node, data){ if(localStorage) localStorage.setItem('buzzmap', data);}, // if map is changed, save to storage
       loadData: cache, //load last session, if there was one
@@ -40,13 +40,53 @@
     buzzmap.bind('fps', function(fps) {
         $('#fps').text(fps);
     });
+    
+    $('h3').show();
+    $('body>ul:eq(1) li').hide();
   });
   -->
   </script>
+  
+  <style type="text/css">
+  BODY {
+    color:#fff;
+    font-family: serif;
+  }
+  h1 {
+    margin-top:0;
+    margin-right: 20px;
+    float:left;
+  }
+  a#download {
+    display: block;
+    padding-top: 0.5em;
+    color: #fff;
+    z-index:10;
+  }
+  h3 {
+    float: right;
+    margin-right: 130px;
+  }
+  .instr {
+    clear:left;
+    padding-left:1em;
+  }
+  svg {
+    z-index:1;
+  }
+  </style>
 
 </head>
 <body>
-  <h3>FPS: <span id="fps">0</span></h3>
+  <h3 style="display:none;">FPS: <span id="fps">0</span></h3>
+  <h1>Buzzmap</h1>
+  <a id="download" href="https://github.com/marcelklehr/buzzmap/zipball/master">Download</a>
+  <ul class="instr">
+    <li>Sort the nodes by dragging them around.</li>
+    <li>Click on a node to display it's children. Click again to hide them.</li>
+    <li>Doubleclick to edit a node.</li>
+  </ul>
+  <a href="http://github.com/marcelklehr/buzzmap" target="_blank" id="fork"><img style="position: absolute; top: 0pt; right: 0pt; border: 0pt none; z-index:10000;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
   <ul>
     <li><div><span>buzzmap</span></div>
 
@@ -61,10 +101,11 @@
           </ul>
 
         </li>
+        <li><div><span><a href="https://github.com/marcelklehr/buzzmap/zipball/master">Download</a></span></div></li>
         <li><div><span>Features</span></div>
 
           <ul>
-          	<li><div><span>Mindmapping</span></div></li> 
+          	<li><div><span>Mindmopping</span></div></li> 
           	<li><div><span>Brainstorming</span></div></li> 
           	<li><div><span>Editing</span></div></li>
           	<li><div><span>Visualisation</span></div></li>
@@ -85,16 +126,8 @@
             <li><div><span>MIT Licence</span></div></li> 
             <li><div><span><a href="LICENSE" target="_blank">Conditions</a></span></div></li>
           </ul>
-         
-        <li><div><span>Secret</span></div>
-          <ul>
-            <li><div><span>It's free...</span></div></li>
-          </ul>
-
-        </li>
       </ul>
     </li>
   </ul>
-  <p>Have fun!</p>
 </body>
 </html>
