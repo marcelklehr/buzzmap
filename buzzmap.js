@@ -1,5 +1,5 @@
 /**
- * Buzzmap 2.0.0
+ * Buzzmap 2.0.1
  * Copyright (c) 2011 Marcel Klehr
  *
  * based on "js-mindmap"
@@ -587,7 +587,6 @@
     
     this.moveTimer = 0;
     this.moving = false;
-    this.editing = false;
 		this.stopMovement = false;
     this.fps = 0;
     
@@ -724,12 +723,19 @@
   
   /* jQUERY */
   
-    $.fn.buzzmap = function (options) {
+  $.fn.buzzmap = function (options) {
     var obj = new Buzzmap(this[0], options);
     
     // no data to pre-load
     if(!obj.options.structure)
       return obj;
+    
+    var buzz = function() {
+      // Set ui-draggable style
+      $('<style type="text/css"></style>').text('.ui-draggable{position:absolute !important;}').appendTo('head');
+      obj.animate();
+      return obj;
+    };
     
     // jQuery selector
     var $data = $(obj.options.structure).filter('ul');
@@ -742,11 +748,12 @@
           $('>ul>li', this).each(addLI);
       };
       $('>li', $data).each(addLI);
+      return buzz();
     }
     
     // can this be JSON?
     if(typeof(obj.options.structure) !== 'string')
-      throw new Error('Couldn`t interpret the passed structure');
+      throw new Error('Buzzmap: Couldn\'t interpret the passed structure');
     
     // serialized JSON data
     try {
@@ -759,16 +766,10 @@
         });
       };
       nodeCreate(obj.root, map.children);
-    } catch(e) {
-      throw new Error('Couldn`t interpret the passed structure');
+    }catch(e) {
+      throw new Error('Buzzmap: Couldn\'t interpret the passed structure');
     }
-    
-    // Set ui-draggable style
-    // '.ui-draggable {position: absolute !important;}'
-    $('<style type="text/css"></style>').text('.ui-draggable{position:absolute !important;}').appendTo('head');
-      
-    obj.animate();
-    return obj;
+    return buzz();
   };
   
 })(jQuery);
