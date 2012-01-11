@@ -1,51 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>buzzmap - Demo</title>
+  <title>Buzzmap - mindmaps with ease</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <link href="buzzmap.css" rel="stylesheet" type="text/css"/>
-  <link href="custom-style.css" type="text/css" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"  type="text/css"/>
   
-  <!-- Raphael for SVG support (won't work on android) -->
+  <!-- Raphael, for SVG support -->
   <script src="raphael.min.js" type="text/javascript"></script>
 
-  <!-- jQuery -->
+  <!-- jQuery, of course! -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js" type="text/javascript"></script>
   
-  <!-- UI, for draggable nodes -->
+  <!-- jQuery UI, for the draggable nodes... -->
   <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js" type="text/javascript"></script>
 
-  <!-- buzzmap -->
-  <script src="buzzmap.js" type="text/javascript"></script>
-
-  <!-- Kick everything off -->
-  <script type="text/javascript">
-  <!--
-  var buzzmap;
-  $(document).ready(function ()
-  {
-    // Retrieving previous session
-    if(localStorage)
-	    var cache = localStorage.getItem('buzzmap');
-    
-    // init buzzmap
-    buzzmap = $('body>ul:eq(1)').buzzmap({
-      editable: true, // doubleclick to edit a node
-      onchange: function(node, data){ if(localStorage) localStorage.setItem('buzzmap', data);}, // if map is changed, save to storage
-      loadData: cache, //load last session, if there was one
-      frameRate: 200
-    });
-    
-    // register callback for frame rate
-    buzzmap.bind('fps', function(fps) {
-        $('#fps').text(fps);
-    });
-    
-    $('h3').show();
-    $('body>ul:eq(1) li').hide();
-  });
-  -->
-  </script>
+  <!-- Buzzmap, come on?! -->
+  <script src="buzzmap.min.js" type="text/javascript"></script>
   
   <style type="text/css">
   BODY {
@@ -62,42 +32,78 @@
     padding-top: 0.7em;
     color: #fff;
     position:relative;
-    z-index:10;
+    z-index:2;
   }
   h3 {
     float: right;
     margin-right: 130px;
   }
-  .instr {
+  #instr {
     clear:left;
     padding-left:1em;
   }
-  svg {
+  #container {
+    position:fixed;
+    top:0;
+    width:100%;
+    height:100%;
     z-index:1;
   }
   </style>
+
+  <!-- Kick everything off -->
+  <script type="text/javascript">
+  <!--
+  var buzzmap;
+  $(document).ready(function ()  {
+    // Retrieving previous session
+    if(localStorage)
+      var cache = localStorage.getItem('buzzmap');
+    
+    // Init buzzmap
+    buzzmap = $('#container').buzzmap({
+      structure: cache || '#structure', // load last session, otherwise load data from DOM: $('#structure')
+      editable: true, // enable edit mode
+      onchange: function(node, data){  // if map is changed, save to localStorage
+        if(localStorage)
+          localStorage.setItem('buzzmap', data);
+      },
+    });
+    
+    // Register callback for frame rate
+    buzzmap.bind('fps', function(fps) {
+        $('#fps').text(fps);
+    });
+    
+    // Do other necessary things...
+    $('h3').show();
+    $('#structure li').hide();
+  });
+  -->
+  </script>
 
 </head>
 <body>
   <h3 style="display:none;">FPS: <span id="fps">0</span></h3>
   <h1>Buzzmap</h1>
   <a id="download" href="https://github.com/marcelklehr/buzzmap/zipball/master">Download</a>
-  <ul class="instr">
+  <ul id="instr">
     <li>Sort the nodes by dragging them around.</li>
     <li>Click on a node to display it's children. Click again to hide them.</li>
-    <li>Doubleclick to edit a node.</li>
+    <li>Doubleclick to edit a node.<br/><i>(Press Enter to submit, Esc to cancel editing. [+] will add a new child node; [x] will delete the node)</i></li>
   </ul>
   <a href="http://github.com/marcelklehr/buzzmap" target="_blank" id="fork"><img style="position: absolute; top: 0pt; right: 0pt; border: 0pt none; z-index:10000;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
-  <ul>
+  
+  <ul id="structure">
     <li><div><span>buzzmap</span></div>
 
       <ul>
         <li><div><span>Resources</span></div>
 
           <ul>
-          	<li><div><span>Raphaël</span></div></li> 
-          	<li><div><span>jQuery</span></div></li> 
-          	<li><div><span>jQueryUI</span></div></li>
+          	<li><div><span><a href="http://raphaeljs.com/" target="_blank">Raphaël</a></span></div></li> 
+          	<li><div><span><a href="http://jquery.com/" target="_blank">jQuery</a></span></div></li> 
+          	<li><div><span><a href="http://jqueryui.com/" target="_blank">jQueryUI</a></span></div></li>
           	<li><div><span><a href="https://github.com/kennethkufluk/js-mindmap" target="_blank">js-mindmap</a></span></div></li>
           </ul>
 
@@ -106,7 +112,7 @@
         <li><div><span>Features</span></div>
 
           <ul>
-          	<li><div><span>Mindmopping</span></div></li> 
+          	<li><div><span>Mindmapping</span></div></li> 
           	<li><div><span>Brainstorming</span></div></li> 
           	<li><div><span>Editing</span></div></li>
           	<li><div><span>Visualisation</span></div></li>
@@ -115,10 +121,12 @@
         </li>
         <li><div><span>Files</span></div>
           <ul>
-      	  <li><div><span><a href="sample.htm" target="_blank">sample.htm</a></span></div></li> 
-            <li><div><span><a href="buzzmap.js" target="_blank">buzzmap.minjs</a></span></div></li> 
-            <li><div><span><a href="buzzmap.css" target="_blank">buzzmap.css</a></span></div></li>
+      	  <li><div><span><a href="index.html" target="_blank">index.html</a></span></div></li> 
+            <li><div><span><a href="buzzmap.js" target="_blank">buzzmap.js</a></span></div></li> 
+            <li><div><span><a href="styles.css" target="_blank">styles.css</a></span></div></li>
             <li><div><span><a href="raphael.min.js" target="_blank">raphael.min.js</a></span></div></li>
+            <li><div><span><a href="README.md" target="_blank">README</a></span></div></li>
+            <li><div><span><a href="LICENSE" target="_blank">LICENSE</a></span></div></li>
           </ul>
         </li>
 
@@ -130,5 +138,7 @@
       </ul>
     </li>
   </ul>
+  
+  <div id="container"></div>
 </body>
 </html>

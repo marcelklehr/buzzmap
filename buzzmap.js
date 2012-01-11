@@ -1,5 +1,5 @@
 /**
- * buzzmap
+ * Buzzmap 2.0.0
  * Copyright (c) 2011 Marcel Klehr
  *
  * based on "js-mindmap"
@@ -82,11 +82,9 @@
     var thisnode = this;
     
 	  // Define Properties
-		this.obj      = obj;// root ul
+		this.obj      = obj;// Buzzmap object
 		this.parent   = parent;
 		this.children = [];
-    this.visible = false;
-    this.moveTimer = 0;
     
     // Vectors
     this.x = 1;
@@ -95,42 +93,40 @@
 		this.dy = 0;
     
     // Define States
+    this.visible = false;
     this.editing = false;
     this.dragging = false;
     this.hasPosition = false;// node position calculated?
     
     // create the node element
 		this.el = $('<div></div>');
-		this.el.css('position','absolute');
+		this.el.css('position', 'absolute');
 		this.el.addClass('node');
-		this.obj.el.prepend(this.el);
+		this.obj.el.append(this.el);
     this.el.hide();
     
     // label
     this.label(label);
     
     // root node?
-    if(!this.parent)// mighty root node
+    if(!this.parent)// THE (INVISIBLE) ALMIGHTY ROOT NODE! (It will kick you in the ass, watch out! I have warned you...)
     {
       this.el.addClass('active');
-    }else
-    {
+    }else {
       this.parent.children.push(this);
       
-      if(!this.parent.parent)// visible root
-      {
+      if(!this.parent.parent){ // Some normal, (visible) root node
         this.el.addClass('active');
         this.el.addClass('root');
       }
-      else// child nodes
-      {
+      else{ // Some normal child node
         this.obj.lines[this.obj.lines.length] = new Line(obj, this, parent);
       }
     }
     
     // click
 		this.el.mouseup(function () {
-      if(thisnode.editing == true || thisnode.dragging == true)
+      if(thisnode.dragging == true ||thisnode.editing == true)
         return true;
       
 			if(thisnode.obj.options.editable !== true)
@@ -140,9 +136,11 @@
       }
       
       // edit mode: little puffer time for enabling dblclick
-      // window.setTimeout(function() {
+      window.setTimeout(function() {
+        if(thisnode.editing == true)
+          return true;
         thisnode.toggleChildren();
-      // },200);
+      },250);
       
       return true;
 		});
@@ -208,7 +206,10 @@
 		var thisnode = this;
     
     thisnode.editing = true;
-		thisnode.obj.editing = true;
+    
+    // adjust min speed
+    var minSpeed = thisnode.obj.options.minSpeed;
+    thisnode.obj.options.minSpeed = (0.35 > minSpeed) ? 0.35 : minSpeed;
 
 		// save current value and clear
 		var old_value = this.label();
@@ -220,14 +221,16 @@
 
 			// execute onchange callback
 		  thisnode.obj.trigger('onchange', thisnode, thisnode.obj.serialize());
-			thisnode.obj.editing = thisnode.editing = false;
+			thisnode.editing = false;
+      thisnode.obj.options.minSpeed = minSpeed;
       thisnode.obj.animate();
 		};
 
 		var cancel = function ()
 		{
 			thisnode.label('<span>'+old_value+'</span>');
-			thisnode.editing = thisnode.obj.editing = false;
+			thisnode.editing = false;
+      thisnode.obj.options.minSpeed = minSpeed;
       thisnode.obj.animate();
 		};
 
@@ -255,24 +258,22 @@
 		$input.appendTo(thisnode.el).focus().select();
 		
 		// build '+' button
-		$('<button class="edit-button">+</button>').click(function ()	{
-			cancel();
+		$('<button class="edit-button">+</button>').click(function (evt)	{
       thisnode.el.addClass('active');
-      thisnode.obj.addNode(thisnode).edit();
+      cancel();
+      var node = thisnode.obj.addNode(thisnode);
+      node.edit();
 			return false;
 		}).appendTo(thisnode.el);
 
 		// build 'x' button
-		if(thisnode !== this.obj.root)
-		{
-			$('<button class="edit-button">x</button>').click(function ()
-			{
-        cancel();
-				thisnode.removeNode();
-        thisnode.obj.animate();
-				return false;
-			}).appendTo(thisnode.el);
-		}
+    $('<button class="edit-button">x</button>').click(function ()
+    {
+      cancel();
+      thisnode.removeNode();
+      thisnode.obj.animate();
+      return false;
+    }).appendTo(thisnode.el);
 		return false;
 	};
   
@@ -393,8 +394,8 @@
 			if (this.visible)
         return;
       var angle = i * stepAngle;
-      var x = (50 * Math.cos(angle)) + parent.x;
-      var y = (50 * Math.sin(angle)) + parent.y;
+      var x = (100 * Math.cos(angle)) + parent.x;
+      var y = (100 * Math.sin(angle)) + parent.y;
       this.setPosition(x,y);
 		});
 		// update my position
@@ -406,8 +407,8 @@
 	{
 		if($(this.el).hasClass("ui-draggable-dragging"))
 		{
-			this.x = parseInt(this.el.css('left')) + ($(this.el).width() / 2);
-			this.y = parseInt(this.el.css('top')) + ($(this.el).height() / 2);
+			this.x = parseInt(this.el.css('left')) + ($(this.el).width() / 2) - this.obj.offset.left;
+			this.y = parseInt(this.el.css('top')) + ($(this.el).height() / 2) - this.obj.offset.top;
 			this.dx = 0;
 			this.dy = 0;
 			return false;
@@ -434,8 +435,8 @@
 		this.y = Math.min(this.obj.height,Math.max(1,this.y));
 		
 		// display
-		var showx = this.x - ($(this.el).width() / 2);
-		var showy = this.y - ($(this.el).height() / 2) - 10;
+		var showx = this.obj.offset.left + this.x - ($(this.el).width() / 2);
+		var showy = this.obj.offset.top + this.y - ($(this.el).height() / 2) - 10;
 		this.el.css('left', showx + "px");
 		this.el.css('top', showy + "px");
 		return false;
@@ -487,18 +488,18 @@
 		// add repulsive force of the "walls"
 		//left wall
 		var xdist = this.x + this.el.width();
-		var f = (this.obj.options.wallrepulse * 500) / (xdist * xdist);
+		var f = (this.obj.options.wallRepulse * 500) / (xdist * xdist);
 		fx += Math.min(2, f);
 		//right wall
 		var rightdist = (this.obj.width - xdist);
-		var f = -(this.obj.options.wallrepulse * 500) / (rightdist * rightdist);
+		var f = -(this.obj.options.wallRepulse * 500) / (rightdist * rightdist);
 		fx += Math.max(-2, f);
 		//top wall
-		var f = (this.obj.options.wallrepulse * 500) / (this.y * this.y);
+		var f = (this.obj.options.wallRepulse * 500) / (this.y * this.y);
 		fy += Math.min(2, f);
 		//bottom wall
 		var bottomdist = (this.obj.height - this.y);
-		var f = -(this.obj.options.wallrepulse * 500) / (bottomdist * bottomdist);
+		var f = -(this.obj.options.wallRepulse * 500) / (bottomdist * bottomdist);
 		fy += Math.max(-2, f);
 
 		// for each line, of which I'm a part, add an attractive force.
@@ -539,7 +540,7 @@
 		}
 
 		// if I'm root, attract me to the centre of the area
-		if (!this.parent)
+		if (!this.parent.parent && false)
 		{
 			// Attractive force (hooke's law)
 			var otherend = this.obj.options.mapArea;
@@ -572,62 +573,22 @@
   
   
 /* MAP */
-
-  $.fn.buzzmap = function (options) {
-	  var $mindmap = $(this).filter('ul');
-	  if(!$mindmap.hasClass('buzzmap-active')) {
-      $mindmap.each(function () {
-        var obj = new Buzzmap($(this), options);
-        
-        // Add a class to the object, so that styles can be applied
-        obj.el.addClass('buzzmap-active');
-        obj.el[0].obj = obj;
-        
-        // add the data to the mindmap
-        if(obj.options.loadData)
-        {
-          var map = $.parseJSON(options.loadData);
-          var nodeCreate = function (parent, children)
-          {
-            $.each(children, function (index, n)
-            {
-              node = obj.addNode(parent, decodeURI(n.label))
-              nodeCreate(node, n.children);
-            });
-          };
-
-          //var root = obj.addNode(obj.root, decodeURI(map.node));
-          $.each(map.children, function(index, n) {
-            node = obj.addNode(obj.root, decodeURI(n.label))
-            nodeCreate(node, n.children);
-          });
-        }else{
-          var addLI = function ()
-          {
-              var parentnode = $(this).parents('li').get(0);
-              parentnode = (typeof(parentnode) === 'undefined') ? obj.root : parentnode.mynode;
-              this.mynode = obj.addNode(parentnode, $('div:eq(0)',this).html());
-              $(this).hide();
-              $('>ul>li', this).each(addLI);
-          };
-          $('>li', obj.el).each(addLI);
-        }
-        obj.animate();
-      });
-    }
-    return $mindmap[0].obj;
-  };
   
   var Buzzmap = function(el, options) {
     var obj = this;
     
-    this.el = el;
+    this.el = $(el);
+    this.el[0].buzzmap = this;
+    this.el.addClass('buzzmap');
+    
     this.nodes = [];
     this.lines = [];
     this.parseOptions(options);
+    
+    this.moveTimer = 0;
     this.moving = false;
     this.editing = false;
-		this.movementStopped = false;
+		this.stopMovement = false;
     this.fps = 0;
     
     window.setInterval(function() {
@@ -636,27 +597,27 @@
       obj.trigger('fps', fps);
     }, 500);
     
-    // root node
-    this.root = this.nodes[0] = new Node(this, null, '<span>__ROOT__</span>');
-    
-    $(window).resize(function () {
-      obj.createCanvas(); 
+    $(window).resize(function() {
       obj.animate();
     });
     
-    obj.createCanvas();
+    // root node
+    this.root = this.nodes[0] = new Node(this, null, '<span>Buzzmap</span>');
   };
   
   MicroEvent.mixin(Buzzmap);
   
   Buzzmap.prototype.createCanvas = function() {
-    this.height = (this.options.mapArea.y == -1) ? $(window).height() : this.options.mapArea.y;
-    this.width = (this.options.mapArea.x == -1) ? $(window).width() : this.options.mapArea.x;
+    this.height = this.el.height();
+    this.width = this.el.width();
     if(!this.canvas){
-      this.canvas = Raphael(0, 0, this.width, this.height);
+      this.canvas = Raphael(this.el[0], this.width, this.height);
     }else{
       this.canvas.setSize(this.width, this.height);
-    }    
+    }
+    
+    // calc canvas offset
+    this.offset = (this.el.css('position') == 'relative') ? {top:0, left:0} : this.el.offset();
   };
   
   Buzzmap.prototype.addNode = function (parent, label)
@@ -675,22 +636,25 @@
 	Buzzmap.prototype.animate = function ()
 	{
     var obj = this;
+    
 		// Set animation timeout
-    if(obj.options.timeout != 0) {
-      var timeout = (obj.editing == true) ? 1.5 : obj.options.timeout;
+    if(obj.options.animationTimeout != 0) {
       clearTimeout(obj.moveTimer);
       obj.moveTimer = setTimeout(function () {
-          obj.movementStopped = true;
-      }, timeout*1000);
+          obj.stopMovement = true;
+      }, obj.options.animationTimeout*1000);
     }
 
 		// don't do anything if already moving
 		if (obj.moving)
 			return;
+    
+    // (re)calculate canvas position and offset
+    obj.createCanvas();
 
 		// tell everybody that I'm moving the map
 		obj.moving = true;
-		obj.movementStopped = false;
+		obj.stopMovement = false;
 
 		// start animation loop
 		obj.animateLoop();
@@ -708,7 +672,7 @@
 			this.lines[i].updatePosition();
 		}
     
-		if(this.root.findEquilibrium() || this.movementStopped)
+		if(this.root.findEquilibrium() || this.stopMovement)
 		{
 			this.moving=false;
 			return;
@@ -724,11 +688,7 @@
   Buzzmap.prototype.parseOptions = function(opts) {
     // Define default settings.
     this.options = $.extend({
-      mapArea: {
-          x:-1,
-          y:-1
-      },
-      loadData: null,
+      structure: null,
       editable: false,
 
       onchange: function (node, data) {},
@@ -736,29 +696,79 @@
       onshow: function (node) {},
       onhide: function (node) {},
       onremove: function (node) {},
+      fps: function (fps) {},
 
-      attract: 3,
-      repulse: 2.5,
-      maxForce: 0.15,
-      damping: 0.9,
-      acceleration: 4,
+      attract: 5,
+      repulse: 5,
+      wallRepulse: 0.5,
+      maxForce: 0.25,
+      damping: 0.90,
+      acceleration: 5,
 
       lineWidth: '5px',
       lineColor: '#FFF',
       lineOpacity: 0.3,
 
-      wallrepulse: 0.5,
-      centerOffset:100,
-      centerAttraction:0,
-      minSpeed: 0.05,
-      frameRate:50,
-      timeout: 5
+      minSpeed: 0.2,
+      animationTimeout: 5
+      // centerOffset: 100, #DEPRECATED
+      // centerAttraction: 0, #DEPRECATED
     }, opts);
     this.bind('onchange', this.options.onchange);
     this.bind('ondrag', this.options.ondrag);
     this.bind('onshow', this.options.onshow);
     this.bind('onhide', this.options.onhide);
     this.bind('onremove', this.options.onremove);
+    this.bind('fps', this.options.fps);
+  };
+  
+  /* jQUERY */
+  
+    $.fn.buzzmap = function (options) {
+    var obj = new Buzzmap(this[0], options);
+    
+    // no data to pre-load
+    if(!obj.options.structure)
+      return obj;
+    
+    // jQuery selector
+    var $data = $(obj.options.structure).filter('ul');
+    if($data.length > 0) {
+      var addLI = function () {
+          var parent = $(this).parents('li').get(0);
+          parent = (!parent) ? obj.root : parent.buzznode;
+          this.buzznode = obj.addNode(parent, $('div:eq(0)', this).html());
+          $(this).hide();
+          $('>ul>li', this).each(addLI);
+      };
+      $('>li', $data).each(addLI);
+    }
+    
+    // can this be JSON?
+    if(typeof(obj.options.structure) !== 'string')
+      throw new Error('Couldn`t interpret the passed structure');
+    
+    // serialized JSON data
+    try {
+      var map = JSON.parse(obj.options.structure);
+      var nodeCreate = function (parent, children) {
+        $.each(children, function (index, n) {
+          if(!n.label || !n.children) return;
+          var node = obj.addNode(parent, decodeURI(n.label))
+          nodeCreate(node, n.children);
+        });
+      };
+      nodeCreate(obj.root, map.children);
+    } catch(e) {
+      throw new Error('Couldn`t interpret the passed structure');
+    }
+    
+    // Set ui-draggable style
+    // '.ui-draggable {position: absolute !important;}'
+    $('<style type="text/css"></style>').text('.ui-draggable{position:absolute !important;}').appendTo('head');
+      
+    obj.animate();
+    return obj;
   };
   
 })(jQuery);
