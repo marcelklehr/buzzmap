@@ -25,6 +25,10 @@ Submit any bugs and feature requests to the [bug tracker](http://github.com/marc
 [MIT (X11) License](http://github.com/marcelklehr/buzzmap/blob/master/LICENSE) (see `LICENSE` file)
 
 # Changelog
+2.0.2:
+
+ - Fixed serialization
+
 2.0.1:
 
  - Fixed Bug: Don't throw Error on init
