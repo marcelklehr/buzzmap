@@ -1,6 +1,6 @@
 /**
- * Buzzmap 2.0.1
- * Copyright (c) 2011 Marcel Klehr
+ * Buzzmap 2.0.2
+ * Copyright (c) 2011-2012 Marcel Klehr
  *
  * based on "js-mindmap"
  * Copyright (c) 2008/09/10 Kenneth Kufluk http://kenneth.kufluk.com/
