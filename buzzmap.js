@@ -187,17 +187,20 @@
     return $(':eq(0)', this.el).html();
   };
   
-  // serialize (recursive)
-	Node.prototype.serialize = function ()
+  // serialize
+	Node.prototype.serialize = function() {
+    return JSON.stringify(this.toJSON());
+  };
+  
+  // toJSON recursive
+	Node.prototype.toJSON = function ()
 	{
-		var string = '{"label":"' + $(this.el).html().replace(/"/g, '\\"') + '","children":[';
+		var json = {"label":$(this.el).html(),"children":[]};
 		var count = 0;
 		$.each(this.children, function () {
-      count++;
-      if(count > 1) string += ',';
-      string = string+this.serialize();
+      json.children.push(this.toJSON());
 		});
-		return string+']}';
+		return json;
 	};
   
   // edit node
@@ -451,7 +454,7 @@
 		var lines = this.obj.lines;
 
 		// Calculate the repulsive force from every other node
-		for (var i = 0; i < nodes.length; i++)
+		for(var i = 0; i < nodes.length; i++)
 		{
 			if (nodes[i] === this)
 				continue;
@@ -478,7 +481,7 @@
 			// force is based on radial distance
 			var myrepulse = this.obj.options.repulse;
 			var f = (myrepulse * 500) / (dist * dist);
-			if (Math.abs(dist) < 500)
+			if(Math.abs(dist) < 500)
 			{
 				fx += -f * Math.cos(theta) * xsign;
 				fy += -f * Math.sin(theta) * xsign;
@@ -503,7 +506,7 @@
 		fy += Math.max(-2, f);
 
 		// for each line, of which I'm a part, add an attractive force.
-		for (var i = 0; i < lines.length; i++)
+		for(var i = 0; i < lines.length; i++)
 		{
 			var otherend = null;
 			if (lines[i].start === this)
@@ -761,7 +764,7 @@
       var nodeCreate = function (parent, children) {
         $.each(children, function (index, n) {
           if(!n.label || !n.children) return;
-          var node = obj.addNode(parent, decodeURI(n.label))
+          var node = obj.addNode(parent, n.label)
           nodeCreate(node, n.children);
         });
       };
