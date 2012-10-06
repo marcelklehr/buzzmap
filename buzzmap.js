@@ -286,10 +286,10 @@
 	  this.obj.trigger('onremove', this);
 
 		// remove all children
-		for (var i=0;i<this.children.length;i++)
-		{
-			this.children[i].removeNode();
-		}
+    while(this.children.length > 0)
+    {
+        this.children[0].removeNode();
+    } 
     
     // remove me from parent
     if(this.parent) this.parent.children.splice(this.parent.children.indexOf(this), 1);
