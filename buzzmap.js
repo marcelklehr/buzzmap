@@ -1,5 +1,5 @@
 /**
- * Buzzmap 2.0.2
+ * Buzzmap 2.0.3
  * Copyright (c) 2011-2012 Marcel Klehr
  *
  * based on "js-mindmap"
